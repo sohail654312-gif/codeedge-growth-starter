@@ -27,8 +27,8 @@ AS $function$
  )
 $function$;
 REVOKE ALL ON FUNCTION growth_starter.staging_session_active(text,text,text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION growth_starter.staging_session_active(text,text,text)
-  FROM anon, authenticated, service_role;
+-- All non-reader roles inherit no EXECUTE from PUBLIC. Supabase role names
+-- may be absent in disposable PostgreSQL CI; do not depend on their creation.
 GRANT EXECUTE ON FUNCTION growth_starter.staging_session_active(text,text,text)
   TO growth_starter_reader;
 COMMIT;

@@ -8,3 +8,6 @@
 - `growth_starter.staging_list_workspaces` and `staging_list_requests` are `SECURITY DEFINER` and could execute with their owner's elevated privileges. Enabling RLS does **not** verify their caller's identity. Only the separately verified gateway may supply `p_actor`. A compromised gateway can still impersonate actors at this boundary.
 - This change does NOT deploy a hosted runtime, generate credentials, create users, enable invitations or accept medical imagery.
 - Independent acceptance remains mandatory; avoid treating RLS enabled as proof of full tenant isolation.
+
+## Hosted staging execution evidence (2026-10-08)
+Applied project `dbppeymhsemvghbvuvof` migration `20261008143234_growth_starter_staging_default_deny_rls`. Live SQL metadata verified **7/7 RLS-enabled**, zero policies, zero table rows, anon/auth schema privileges denied. Security advisor no longer flags RLS-disabled; its seven informational RLS-without-policy notices are expected default-deny. Hosted management SQL runs as `postgres`, which has no SET privilege on `growth_starter_reader`; a restricted application LOGIN is not yet established and hosted read tests are blocked. No change to production or existing Codeedge databases.

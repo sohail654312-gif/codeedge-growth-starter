@@ -27,26 +27,17 @@ From repository branch `engineering/phase2-core-security`, revision `5ddbedfb35b
 - Reader role cannot SELECT base workspace table but can EXECUTE its specific approved list function.
 - No client records, invitations or media seeded. Admin SQL readback returned zero workspaces, zero invitations and zero media.
 
-## CRITICAL RLS review gate — not yet applied
-Supabase's table listing flags **all seven tables with RLS disabled**, marked critical. Despite that warning, direct SQL privilege tests independently found `anon`/`authenticated` lack schema usage and table grants, and the project schema is private, so do **not** infer they currently have effective table access. Both layers matter.
+## APPROVED RLS gate — APPLIED / independently inspected
 
-**Default-deny RLS proposal (owner approval required before execution):**
+On 2026-10-08, the owner explicitly approved default-deny RLS on this isolated Growth Starter staging project. The implementation at `db/migrations/0003_staging_default_deny_rls.sql` was applied to project `dbppeymhsemvghbvuvof` as Supabase migration `20261008143234_growth_starter_staging_default_deny_rls`.
 
-```sql
-BEGIN;
-ALTER TABLE growth_starter.workspaces ENABLE ROW LEVEL SECURITY;
-ALTER TABLE growth_starter.memberships ENABLE ROW LEVEL SECURITY;
-ALTER TABLE growth_starter.invitations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE growth_starter.work_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE growth_starter.media ENABLE ROW LEVEL SECURITY;
-ALTER TABLE growth_starter.media_delete_outbox ENABLE ROW LEVEL SECURITY;
-ALTER TABLE growth_starter.audit_events ENABLE ROW LEVEL SECURITY;
-COMMIT;
-```
+**Hosted SQL readback:** 7/7 base tables have `relrowsecurity=true`, zero policies on all seven, zero records in each table, and `anon`/`authenticated` still lack private schema usage; `growth_starter_reader` still lacks direct table SELECT but retains EXECUTE on the deliberately restricted read routine. The earlier critical `RLS disabled` advisory is gone. Supabase now reports 7 informational `rls_enabled_no_policy` notices, **expected** for the default-deny private schema. No automatic public or authenticated grants were added.
 
-No broad `USING (true)` policies or grants should be added. After owner approval, verify `rolrowsecurity`, per-role read/write denials, privileged function behavior and audit functionality. A `SECURITY DEFINER` routine owned by a bypassing role can still bypass RLS; do not equate the above proposal with complete tenant security.
+**Application of RLS is not a hosted multi-user security sign-off.** `SECURITY DEFINER` routines may bypass RLS as their function owner and accept actor identity only from a verified server gateway. Non-owner, TLS-secured staging login and actual two-user IdP connectivity are still missing.
 
-References: https://supabase.com/docs/guides/database/postgres/row-level-security and https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically
+**Hosted role switch limitation:** a manual test `SET LOCAL ROLE growth_starter_reader` via the management SQL connection failed with PostgreSQL `42501` permission denied. Subsequent metadata query confirmed the SQL connection runs as `postgres` and `pg_has_role('postgres','growth_starter_reader','SET')` is false. This does *not* invalidate the RLS readback, but independently confirms that management SQL is NOT the restricted application runtime login. Do not claim the read gateway works in hosted staging based on `SET ROLE` synthetic CI alone. Configure and test a dedicated authorized non-owner LOGIN on an isolated staging service before pilot use.
+
+[Supabase RLS guide](https://supabase.com/docs/guides/database/postgres/row-level-security) · [Default-deny migration](../db/migrations/0003_staging_default_deny_rls.sql).
 
 ## Still BLOCKED for hosted pilot
 - No restricted **LOGIN** account password / SSL pool created for app server. Do not store connection URI in GitHub or browser.

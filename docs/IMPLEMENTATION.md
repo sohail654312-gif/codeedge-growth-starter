@@ -70,3 +70,6 @@ See [Phase 2.2 handoff](PHASE2-2-HANDOFF.md) and [staging adapter](PHASE2-2-STAG
 
 ## Phase 2.2 restricted-login and private-workspace loading safeguard
 The unmerged engineering branch includes a real NOINHERIT PostgreSQL login test and a fail-closed runtime adapter. A signed-in client now clears synthetic demo data during loading instead of showing fake clinic performance in private mode. See [restricted runtime acceptance](RESTRICTED-RUNTIME-ACCEPTANCE.md) and [Phase 2.2 handoff](PHASE2-2-HANDOFF.md). This is **disposable database and source-level evidence**, not hosted staging acceptance or pilot approval.
+
+## Hosted isolated Supabase staging and RLS gate
+Separate project `codeedge-growth-starter-staging` (`dbppeymhsemvghbvuvof`) created with owner approval; migrations 0001–0003 applied only there. Default-deny RLS is active on all seven empty tables with **no policies**. The restricted read role remains NOLOGIN. Runtime account, IdP sessions and two-user hosted access are not configured. See [provisioning evidence](STAGING-PROVISIONING-EVIDENCE.md) and [RLS acceptance](STAGING-RLS-ACCEPTANCE.md). PR stays draft, production unchanged.

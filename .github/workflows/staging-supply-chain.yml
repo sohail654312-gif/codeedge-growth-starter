@@ -15,16 +15,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Resolve pinned staging dependencies to a candidate lockfile
-        working-directory: staging
-        run: npm install --package-lock-only --ignore-scripts --no-fund --no-audit
-      - name: Publish candidate lockfile for review (no secrets)
-        working-directory: staging
-        run: |
-          echo "GS_LOCKFILE_BEGIN"
-          base64 -w0 package-lock.json
-          echo
-          echo "GS_LOCKFILE_END"
       - name: Reproducible staging dependency installation
         working-directory: staging
         run: npm ci --ignore-scripts --no-fund

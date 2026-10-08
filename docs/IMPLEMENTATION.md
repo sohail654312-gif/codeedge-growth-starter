@@ -64,3 +64,6 @@ See [Phase 2 continuation evidence](PHASE2-CONTINUATION-EVIDENCE.md) for R1–R7
 
 ## Phase 2.1 continuation
 See [Phase 2.1 review handoff](PHASE2-1-REVIEW-HANDOFF.md) for exact test separation and R1–R7. Client Website and role-gated Agency desk are built, while invitations, verified approval, signing/publishing, multi-user staging acceptance and real-media release remain blocked.
+
+## Phase 2.2 read-only staging security increment
+See [Phase 2.2 handoff](PHASE2-2-HANDOFF.md) and [staging adapter](PHASE2-2-STAGING-BOUNDARY.md). A rotating-key short-session verifier, restricted PostgreSQL **read-only** role and synthetic two-user HTTP/PG tests are in PR #2. Hosted staging, invitation activation, agency edits and media release **remain BLOCKED**. The upload response no longer signs unapproved media. None of this was deployed to production.

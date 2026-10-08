@@ -34,3 +34,9 @@ The engineering branch now DENIES foreign workspace access from legacy grant row
 
 ## Phase 2.1 evidence
 See [Phase 2.1 review handoff](PHASE2-1-REVIEW-HANDOFF.md). Real disposable PostgreSQL/cryptographically signed synthetic HTTP tests now exist. **Hosted AppDeploy cross-client security remains BLOCKED**: no external verified IdP binding, PostgreSQL runtime connection, production RLS/privilege proof, media scanner, production retention or real hosted two-user tests. Never auto-enable permissions due to CI results.
+
+## Phase 2.2 — additional restricted boundary (unmerged)
+- Standalone staging gateway added with rotating-key RS256 verifier, an **online revocation dependency** and a read-only PostgreSQL role. No real hosted session or isolated Growth Starter database is configured; do not infer hosted assurance from CI.
+- The unreviewed upload POST response no longer returns a signed storage URL or an internal storage key. Previously issued links still require expiry/revocation review.
+- PostgreSQL SECURITY DEFINER functions execute as their trusted owner and accept actor IDs from a server verifier. The restricted role has no arbitrary table read/write privileges, but gateway runtime compromise remains a risk; evaluate DB-bound identity to strengthen this before production.
+- See [Phase 2.2 handoff](PHASE2-2-HANDOFF.md) for R1–R7 release blockers.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 
 const backend = readFileSync('backend/index.ts', 'utf8');
-const frontend = readFileSync('src/App.tsx', 'utf8');
+const frontend = [readFileSync('src/App.tsx', 'utf8'), readFileSync('src/ClinicOverview.tsx', 'utf8')].join('\n');
 
 test('private route definitions include requireAuth middleware', () => {
   const routeLines = backend.split('\n').filter(line => /['"](?:GET|POST|PUT|PATCH|DELETE) \/api\//.test(line));

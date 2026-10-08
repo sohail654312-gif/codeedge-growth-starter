@@ -79,3 +79,6 @@ See [Phase 2.3 handoff](PHASE2-3-HANDOFF.md). Restricted NOLOGIN runtime role an
 
 ## Phase 2.4 manual hosted-test and supply-chain increment
 Implemented a token-redacting two-user acceptance runner and seeded-fixture requirements, added its negative mock regressions, pinned the standalone Node staging dependencies into `staging/package-lock.json`, and added the Node 22 npm-ci/audit workflow. **Neither standalone gateway nor actual two-user sessions are hosted yet.** No live agency writes or production app changes. See [Phase 2.4 handoff](PHASE2-4-HANDOFF.md).
+
+## Phase 2.6 offline SEO/AEO Growth Manager
+Replaced static Google/SEO marketing content with a deterministic, provider-neutral offline keyword/HTML/AEO planning engine, two fictional UK/Pakistan fixtures, reviewable tasks and local report exports. Added a targeted TypeScript UI CI check. Does not crawl public networks, connect real analytics, save client reports or publish anything. See [Phase 2.6 handoff](PHASE2-6-HANDOFF.md) and [research/security notes](PHASE2-6-SEO-GROWTH-MANAGER.md).

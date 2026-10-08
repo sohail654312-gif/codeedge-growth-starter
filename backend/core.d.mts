@@ -16,7 +16,7 @@ export declare function tableFor(kind:string,ownerUserId:string):string;
 export declare function authorize(role:Role,action:Action):true;
 export declare function requestedWorkspace(ctx:{query?:Record<string,unknown>;body?:unknown}):string|null;
 export declare function validGrant(grant:unknown,uid:string,requested:string):boolean;
-export declare function resolveWorkspace(ctx:{user?:{userId:string};query?:Record<string,unknown>;body?:unknown},db:{list(table:string,options:{limit:number}):Promise<{items:Array<Record<string,any>>}>},action:Action):Promise<{workspaceId:string;ownerUserId:string;role:Role}>;
+export declare function resolveWorkspace(ctx:{user?:{userId:string};query?:Record<string,unknown>;body?:unknown},db:{list(table:string,options:{limit:number}):Promise<{items:Array<Record<string,any>>}>},action:Action,trustedMembership?:{capabilities:{authoritativeRead:boolean};authorize:(args:{userId:string;workspaceId:string})=>Promise<unknown>}):Promise<{workspaceId:string;ownerUserId:string;role:Role}>;
 export declare function pageArgs(query?:Record<string,string>):{limit:number;nextToken?:string};
 export declare function validateImageUpload(body:unknown):{filename:string;mime:string;base64:string;extension:string;size:number};
 export declare function reviewRequestTransition(current:string,desired:string,role:Role):string;

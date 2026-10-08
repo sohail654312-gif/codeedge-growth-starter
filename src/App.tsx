@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { auth, api } from '@appdeploy/client';
 import ClinicOverview from './ClinicOverview';
+import WorkProgress from './WorkProgress';
 import {
   Activity,
   ArrowRight,
@@ -72,6 +73,8 @@ type Overview = {
   enquiries: Enquiry[];
   requests: Work[];
   assets: Asset[];
+  role?: 'owner' | 'agency_admin' | 'staff' | 'client';
+  workspaceId?: string;
 };
 type Tab =
   | 'Overview'
@@ -340,6 +343,23 @@ function App() {
       flash('Could not submit your request.');
     } finally {
       setBusy(false);
+    }
+  }
+  async function requestCorrection(original: Work, notes: string) {
+    if (demo) { flash('Sign in to request changes.'); return; }
+    const safeNotes = notes.trim();
+    if (safeNotes.length < 4 || safeNotes.length > 500) { flash('Please describe the change in 4 to 500 characters.'); return; }
+    try {
+      await api.post('/api/requests', {
+        title: ('Change request: ' + original.title).slice(0, 100),
+        kind: original.kind,
+        notes: safeNotes,
+      });
+      await refresh();
+      flash('Your correction was added as a separate tracked request.');
+    } catch {
+      flash('Could not submit the correction. Please try again.');
+      throw new Error('Correction request failed.');
     }
   }
   async function updateStatus(id: string, status: string) {
@@ -720,6 +740,13 @@ function App() {
                   </div>
                 </div>
               </div>
+              <WorkProgress
+                requests={requests}
+                demo={demo}
+                role={data.role}
+                onNewRequest={() => guard('request')}
+                onCorrection={requestCorrection}
+              />
               <div className="panel content-board">
                 <div className="panel-header">
                   <div>

@@ -116,7 +116,7 @@ export function validGrant(grant,uid,requested) {
     ROLES.includes(grant.role) &&
     grant.role!=='owner';
 }
-export async function resolveWorkspace(ctx,db,action) {
+export async function resolveWorkspace(ctx,db,action,trustedMembership) {
   const uid=principalId(ctx.user);
   const own=ownerWorkspaceId(uid);
   const selected=requestedWorkspace(ctx) || own;
@@ -124,14 +124,14 @@ export async function resolveWorkspace(ctx,db,action) {
     authorize('owner',action);
     return {workspaceId:own,ownerUserId:uid,role:'owner'};
   }
-  // Grants are written only by future server-controlled invitation/membership service.
-  // This stage deliberately has NO public API that can mint a membership.
-  const {items}=await db.list(tableFor('memberships',uid),{limit:25});
-  const grants=items.filter(g=>validGrant(g,uid,selected));
-  if(grants.length!==1) throw new DomainError('Workspace access denied.',403);
-  const grant=grants[0];
-  authorize(grant.role,action);
-  return {workspaceId:selected,ownerUserId:grant.ownerUserId,role:grant.role};
+  // Legacy per-user grant tables alone are NOT an authoritative membership source.
+  // Foreign workspaces remain disabled until a transaction-backed, verified
+  // membership provider is explicitly wired into the runtime.
+  if(!trustedMembership?.capabilities?.authoritativeRead) throw new DomainError('Workspace access denied.',403);
+  const proof=await trustedMembership.authorize({userId:uid,workspaceId:selected});
+  if(!validGrant(proof,uid,selected)) throw new DomainError('Workspace access denied.',403);
+  authorize(proof.role,action);
+  return {workspaceId:selected,ownerUserId:proof.ownerUserId,role:proof.role};
 }
 export function pageArgs(query={}) {
   let limit=20;

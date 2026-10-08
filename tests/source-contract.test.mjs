@@ -29,3 +29,10 @@ test('critical platform sources and domain tests present',()=>{
   assert.ok(existsSync(path),path);
  }
 });
+
+test('work progress makes client approvals explicitly unavailable pending atomic storage',()=>{
+ const ui=readFileSync('src/WorkProgress.tsx','utf8');
+ assert.match(ui,/Approval pending security gate/);
+ assert.match(ui,/disabled title='Approval requires independently verified atomic persistence'/);
+ assert.match(ui,/separate tracked request/);
+});

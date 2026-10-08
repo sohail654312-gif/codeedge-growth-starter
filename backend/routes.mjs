@@ -5,11 +5,11 @@ import {
 
 // The SDK primitives are dependency-injected so the exact route handlers can
 // be tested against a deterministic fake without production credentials.
-export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,cryptoRandomUUID}) {
+export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,cryptoRandomUUID,trustedMembership=null,workflowMutations=null,mediaLifecycle=null}) {
   const protect=requireAuth();
   async function safe(ctx,action,fn) {
     try {
-      const workspace=await resolveWorkspace(ctx,db,action);
+      const workspace=await resolveWorkspace(ctx,db,action,trustedMembership);
       return await fn(workspace);
     } catch (caught) {
       if(caught instanceof DomainError) return error(caught.message,caught.status);
@@ -19,13 +19,18 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
   async function safePersonal(ctx,fn) {
     try {
       const uid=ctx.user?.userId;
-      // This endpoint lists only server-verified personal and active grant IDs.
       const own=ownerWorkspaceId(uid);
-      const {items}=await db.list(tableFor('memberships',uid),{limit:25});
-      const grants=items.filter(entry=>validGrant(entry,uid,entry?.workspaceId))
-        .map(entry=>({workspaceId:entry.workspaceId,role:entry.role}));
-      return await fn([{workspaceId:own,role:'owner'},...grants]);
-    } catch (caught) {
+      // Only the owner's workspace is visible by default.
+      // No legacy grant tables are trusted for workspace discovery.
+      let visible=[{workspaceId:own,role:'owner'}];
+      if(trustedMembership?.capabilities?.authoritativeRead) {
+        const permitted=await trustedMembership.list({userId:uid});
+        if(!Array.isArray(permitted)) throw new DomainError('Membership response invalid.',403);
+        visible=[...visible,...permitted.filter(g=>validGrant(g,uid,g?.workspaceId))
+          .map(g=>({workspaceId:g.workspaceId,role:g.role}))];
+      }
+      return await fn(visible);
+    } catch(caught) {
       if(caught instanceof DomainError) return error(caught.message,caught.status);
       throw caught;
     }
@@ -47,8 +52,13 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
           db.list(tableFor('assets',owner),{limit:24})
         ]);
         const assetRows=await Promise.all(assets.items.map(async asset=>{
+          // Never sign forged/cross-tenant paths or unapproved material.
+          const ownedPath=typeof asset.path==='string' &&
+            /^growth-starter\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.(png|jpg|webp)$/.test(asset.path) &&
+            asset.path.startsWith('growth-starter/'+owner+'/');
+          if(!ownedPath || asset.consentStatus!=='approved') return {...asset,path:undefined,url:''};
           const [signed]=await storage.url([asset.path]);
-          return {...asset,url:signed?.url||''};
+          return {...asset,path:undefined,url:signed?.url||''};
         }));
         return json({
           workspaceId:workspace.workspaceId, role:workspace.role,
@@ -124,43 +134,32 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
     'PUT /api/requests/:id/status': [
       protect,
       async ctx => safe(ctx,'request:review',async workspace=>{
+        // AppDeploy list/get+update is not verified atomic. Never perform
+        // consequence-bearing state transitions with that operation.
+        if(!workflowMutations?.capabilities?.atomicTransitions) return error('Review transitions require verified transactional persistence.',503);
         const id=validRecordId(ctx.params?.id);
-        const requested=ctx.body?.status;
-        const key=tableFor('requests',workspace.ownerUserId);
-        const [previous]=await db.get(key,[id]);
-        if(!previous)return error('Request not found.',404);
-        const status=reviewRequestTransition(previous.status,requested,workspace.role);
-        const record={...previous,status,updatedAt:new Date().toISOString(),reviewedBy:ctx.user.userId};
-        const [saved]=await db.update(key,[{id,record}]);
-        return saved?json({...record,id}):error('Could not update request.',500);
+        const proposed=reviewRequestTransition;
+        return await workflowMutations.review({workspace,actor:ctx.user.userId,id,
+          requested:ctx.body?.status,validate:proposed,json,error});
       })
     ],
     'POST /api/requests/:id/decision': [
       protect,
       async ctx => safe(ctx,'request:decide',async workspace=>{
-        const id=validRecordId(ctx.params?.id);
-        const key=tableFor('requests',workspace.ownerUserId);
-        const [previous]=await db.get(key,[id]);
-        if(!previous)return error('Request not found.',404);
-        const status=clientRequestDecision(previous.status,ctx.body?.decision,workspace.role);
-        const record={...previous,status,updatedAt:new Date().toISOString(),decidedBy:ctx.user.userId};
-        const [saved]=await db.update(key,[{id,record}]);
-        return saved?json({...record,id}):error('Could not decide request.',500);
+        if(!workflowMutations?.capabilities?.atomicTransitions) return error('Approval requires verified transactional persistence.',503);
+        return await workflowMutations.decision({workspace,actor:ctx.user.userId,
+          id:validRecordId(ctx.params?.id),decision:ctx.body?.decision,
+          validate:clientRequestDecision,json,error});
       })
     ],
     'DELETE /api/assets/:id': [
       protect,
       async ctx => safe(ctx,'asset:delete',async workspace=>{
-        const id=validRecordId(ctx.params?.id);
-        const key=tableFor('assets',workspace.ownerUserId);
-        const [existing]=await db.get(key,[id]);
-        if(!existing)return error('Image not found.',404);
-        const prefix='growth-starter/'+workspace.ownerUserId+'/';
-        if(typeof existing.path!=='string'||!existing.path.startsWith(prefix)) return error('Stored media path is not authorized.',403);
-        const [removed]=await storage.delete([existing.path]);
-        if(!removed)return error('Could not delete image.',500);
-        const [deleted]=await db.delete(key,[id]);
-        return deleted?json({deleted:true,id}):error('Image deleted, but metadata cleanup needs support.',500);
+        // Delete storage and metadata via a durable tombstone/outbox adapter;
+        // never report a partial two-service deletion as success.
+        if(!mediaLifecycle?.capabilities?.durableDeletion) return error('Durable media deletion is not yet available.',503);
+        return await mediaLifecycle.remove({workspace,actor:ctx.user.userId,
+          id:validRecordId(ctx.params?.id),json,error});
       })
     ],
     'POST /api/assets': [

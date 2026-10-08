@@ -10,7 +10,7 @@ test('private route definitions include requireAuth middleware', () => {
   assert.ok(routeLines.length >= 6, 'Main API routes must be declared');
   for (const line of routeLines) {
     if (line.includes('/api/_healthcheck')) continue;
-    assert.match(line, /requireAuth\(\)/);
+    assert.match(backend.slice(backend.indexOf(line), backend.indexOf(line) + 180), /:\s*\[\s*requireAuth\(\)/);
   }
 });
 

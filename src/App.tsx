@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { auth, api } from '@appdeploy/client';
 import ClinicOverview from './ClinicOverview';
 import WorkProgress from './WorkProgress';
+import SeoGrowthManager from './SeoGrowthManager';
 import {WebsitePage,AgencyDesk} from './ServicePages';
 import {
   Activity,
@@ -822,68 +823,10 @@ function App() {
             <>
               <PageHeading
                 eyebrow="SEARCH VISIBILITY"
-                title="Be found where it matters."
-                desc="Your website, local SEO and answer-engine visibility in one clear plan."
+                title="SEO Growth Manager"
+                desc="Research keywords, review webpage evidence and plan useful answers without invented marketing metrics."
               />
-              <div className="seo-banner">
-                <Globe2 size={32} />
-                <div>
-                  <strong>Local growth, without the jargon</strong>
-                  <p>
-                    Codeedge works on the website, Google Business Profile,
-                    relevant service pages and helpful answers. Connected data
-                    comes in later phases.
-                  </p>
-                </div>
-              </div>
-              <div className="seo-grid">
-                {[
-                  {
-                    icon: Globe2,
-                    title: 'Website presence',
-                    desc: 'A fast, mobile-friendly site built to convert visitors into enquiries.',
-                    badge: 'STEP 01',
-                  },
-                  {
-                    icon: Search,
-                    title: 'Google & local SEO',
-                    desc: 'Clear services, local search pages, helpful information and review strategy.',
-                    badge: 'STEP 02',
-                  },
-                  {
-                    icon: Sparkles,
-                    title: 'AEO readiness',
-                    desc: 'Answer real customer questions with structured, useful content.',
-                    badge: 'STEP 03',
-                  },
-                  {
-                    icon: TrendingUp,
-                    title: 'Measure growth',
-                    desc: 'Track source enquiries and bookings; connect verified analytics later.',
-                    badge: 'STEP 04',
-                  },
-                ].map(item => (
-                  <div className="seo-card" key={item.title}>
-                    <div className="seo-icon">
-                      <item.icon size={22} />
-                    </div>
-                    <small>{item.badge}</small>
-                    <h3>{item.title}</h3>
-                    <p>{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="tip-line">
-                <ShieldCheck size={17} /> Google rankings, views, and SEO
-                performance are not connected to this preview. No live figures
-                are claimed.
-              </div>
-              <button
-                className="primary-button"
-                onClick={() => guard('request')}
-              >
-                Request an SEO task <ArrowRight size={16} />
-              </button>
+              <SeoGrowthManager demo={demo}/>
             </>
           )}
           {tab === 'Media library' && (

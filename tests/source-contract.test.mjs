@@ -64,3 +64,15 @@ test('private workspace never displays fictional demo records while authenticati
   assert.match(frontend, /setLoadingWorkspace\(true\)/);
   assert.match(frontend, /role="status" aria-live="polite"/);
 });
+
+test('SEO tab provides a real offline report surface rather than static marketing cards',()=>{
+ const ui=readFileSync('src/SeoGrowthManager.tsx','utf8');
+ assert.match(frontend,/SeoGrowthManager/);
+ assert.match(ui,/runOfflineGrowthReport/);
+ assert.match(ui,/exportKeywordCsv/);
+ assert.match(ui,/Not connected/);
+ assert.match(ui,/awaiting security approval/);
+ assert.match(ui,/offline/i);
+ assert.ok(existsSync('backend/seo-growth.mjs'));
+ assert.ok(existsSync('backend/seo-fixtures.mjs'));
+});

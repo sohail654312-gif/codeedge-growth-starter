@@ -82,7 +82,7 @@ export async function createRestrictedStagingPool({ rawPool }) {
         if(!Array.isArray(args) || args.length!==3 ||
            !uuid.test(args[0] || '') || !uuid.test(args[1] || '') ||
            typeof args[2]!=='string' || args[2].length>254 ||
-           !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(args[2])) fail();
+           !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(args[2])) fail();
       } else fail();
 
       const client = await rawPool.connect();

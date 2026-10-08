@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {runOfflineGrowthReport,exportKeywordCsv,requestNetworkCrawl,INTEGRATION_CONTRACT} from '../backend/seo-growth.mjs';
@@ -67,4 +68,15 @@ test('offline robots and sitemap evidence is parsed without any network access',
  assert.deepEqual(r.siteAudit.directives.sitemapPaths,['/boiler-repair']);
  assert.ok(r.siteAudit.directives.sitemapReferences.every(x=>x.inScope));
  assert.ok(r.keywords.every(x=>x.suggestedHeading && x.suggestedTitle && x.internalLinkTarget));
+});
+
+test('fictional end-to-end CLI produces parseable JSON and downloadable keyword CSV',()=>{
+ const json=execFileSync(process.execPath,['backend/seo-demo.mjs','plumbing','json'],{encoding:'utf8',timeout:5000});
+ const report=JSON.parse(json);
+ assert.equal(report.version,'growth-starter.seo-report.v1');
+ assert.equal(report.publication.enabled,false);
+ assert.ok(report.tasks.length>=1 && report.keywords.length>=1 && report.aeo.length>=1);
+ const csv=execFileSync(process.execPath,['backend/seo-demo.mjs','clinic','csv'],{encoding:'utf8',timeout:5000});
+ assert.match(csv,/Not available/);
+ assert.match(csv,/Peshawar/);
 });

@@ -346,9 +346,9 @@ function App() {
     }
   }
   async function requestCorrection(original: Work, notes: string) {
-    if (demo) { flash('Sign in to request changes.'); return; }
+    if (demo) { flash('Sign in to request changes.'); return false; }
     const safeNotes = notes.trim();
-    if (safeNotes.length < 4 || safeNotes.length > 500) { flash('Please describe the change in 4 to 500 characters.'); return; }
+    if (safeNotes.length < 4 || safeNotes.length > 500) { flash('Please describe the change in 4 to 500 characters.'); return false; }
     try {
       await api.post('/api/requests', {
         title: ('Change request: ' + original.title).slice(0, 100),
@@ -357,9 +357,10 @@ function App() {
       });
       await refresh();
       flash('Your correction was added as a separate tracked request.');
+      return true;
     } catch {
       flash('Could not submit the correction. Please try again.');
-      throw new Error('Correction request failed.');
+      return false;
     }
   }
   async function updateStatus(id: string, status: string) {

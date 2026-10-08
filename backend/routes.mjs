@@ -138,18 +138,19 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
         // consequence-bearing state transitions with that operation.
         if(!workflowMutations?.capabilities?.atomicTransitions) return error('Review transitions require verified transactional persistence.',503);
         const id=validRecordId(ctx.params?.id);
-        const proposed=reviewRequestTransition;
-        return await workflowMutations.review({workspace,actor:ctx.user.userId,id,
-          requested:ctx.body?.status,validate:proposed,json,error});
+        const result=await workflowMutations.review({workspace,actor:ctx.user.userId,id,
+          requested:ctx.body?.status,expectedVersion:ctx.body?.version});
+        return json(result);
       })
     ],
     'POST /api/requests/:id/decision': [
       protect,
       async ctx => safe(ctx,'request:decide',async workspace=>{
         if(!workflowMutations?.capabilities?.atomicTransitions) return error('Approval requires verified transactional persistence.',503);
-        return await workflowMutations.decision({workspace,actor:ctx.user.userId,
+        const result=await workflowMutations.decision({workspace,actor:ctx.user.userId,
           id:validRecordId(ctx.params?.id),decision:ctx.body?.decision,
-          validate:clientRequestDecision,json,error});
+          expectedVersion:ctx.body?.version});
+        return json(result);
       })
     ],
     'DELETE /api/assets/:id': [

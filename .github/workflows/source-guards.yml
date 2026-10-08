@@ -15,6 +15,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Check runtime-neutral JavaScript syntax
+        run: |
+          node --check backend/core.mjs
+          node --check backend/routes.mjs
+          node --check backend/transactional.mjs
       - name: Independent domain, route, and regression tests (stubbed SDK)
         run: node --test tests/*.test.mjs
       - name: Check for conflict markers and accidental secret examples

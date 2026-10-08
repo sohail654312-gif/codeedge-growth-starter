@@ -17,7 +17,7 @@ const png=Buffer.concat([
  Buffer.from([137,80,78,71,13,10,26,10]),
  Buffer.from([0,0,0,13]),Buffer.from('IHDR'),Buffer.alloc(20,0)
 ]).toString('base64');
-function fixture() {
+function fixture(options={}) {
   const tables=new Map(),written=[];
   let seq=0;
   const rows=key=>{if(!tables.has(key))tables.set(key,[]);return tables.get(key)};
@@ -53,7 +53,7 @@ function fixture() {
   const json=(data,status=200)=>({status,data});
   const error=(message,status=400)=>({status,data:{error:message}});
   const requireAuth=()=>async ctx=>ctx.user?undefined:error('Unauthorized',401);
-  const routes=makeGrowthStarterRoutes({db,storage,json,error,requireAuth,cryptoRandomUUID:()=>String(++seq).padStart(12,'0')});
+  const routes=makeGrowthStarterRoutes({db,storage,json,error,requireAuth,cryptoRandomUUID:()=>String(++seq).padStart(12,'0'),...options});
   async function call(method,path,{user,body,query={},params={}}={}) {
     const handlers=routes[method+' '+path];
     assert.ok(handlers,'Unknown route '+method+' '+path);
@@ -229,7 +229,7 @@ test('staff cannot approve a request and client cannot claim completion',async()
   const decision=await x.call('POST','/api/requests/:id/decision',{user:bob,query:{workspaceId:workspaceA},params:{id:request.data.id},body:{decision:'Approved'}});
   assert.equal(decision.status,403);
   const a=await x.call('PUT','/api/requests/:id/status',{user:bob,query:{workspaceId:workspaceA},params:{id:request.data.id},body:{status:'In progress'}});
-  assert.equal(a.status,503);
+  assert.equal(a.status,403);
   const foreign=await x.call('PUT','/api/requests/:id/status',{user:bob,params:{id:request.data.id},body:{status:'Awaiting approval'}});
   assert.equal(foreign.status,503);
 });
@@ -244,4 +244,24 @@ test('private image delete checks role, workspace, and stored owner path',async(
   const removed=await x.call('DELETE','/api/assets/:id',{user:alice,params:{id}});
   assert.equal(removed.status,503);
   assert.equal(x.rows(tableFor('assets',alice)).length,1);
+});
+test('trusted server-injected membership verifies exact tenant and limits client rights',async()=>{
+  const grant={userId:bob,ownerUserId:alice,workspaceId:workspaceA,role:'client',state:'active'};
+  const trustedMembership={capabilities:{authoritativeRead:true},
+    authorize:async({userId,workspaceId})=>userId===bob&&workspaceId===workspaceA?grant:null,
+    list:async({userId})=>userId===bob?[grant]:[]};
+  const x=fixture({trustedMembership});
+  const created=await x.call('POST','/api/enquiries',{user:alice,body:{name:'Synthetic prospect',service:'ENT'}});
+  assert.equal(created.status,201);
+  const read=await x.call('GET','/api/overview',{user:bob,query:{workspaceId:workspaceA}});
+  assert.equal(read.status,200);
+  assert.equal(read.data.role,'client');
+  assert.equal(read.data.enquiries[0].name,'Synthetic prospect');
+  const denied=await x.call('PUT','/api/enquiries/:id',{user:bob,query:{workspaceId:workspaceA},params:{id:created.data.id},body:{status:'Won'}});
+  assert.equal(denied.status,403);
+  const listed=await x.call('GET','/api/workspaces',{user:bob});
+  assert.equal(listed.data.workspaces.length,2);
+  const forged=fixture({trustedMembership:{...trustedMembership,authorize:async()=>({...grant,role:'owner'})}});
+  const blocked=await forged.call('GET','/api/overview',{user:bob,query:{workspaceId:workspaceA}});
+  assert.equal(blocked.status,403);
 });

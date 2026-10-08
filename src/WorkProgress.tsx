@@ -9,7 +9,7 @@ type Props={
   demo:boolean;
   role?:string;
   onNewRequest:()=>void;
-  onCorrection:(request:ProgressRequest,note:string)=>Promise<void>;
+  onCorrection:(request:ProgressRequest,note:string)=>Promise<boolean>;
 };
 const steps=['Requested','In progress','Awaiting approval','Approved','Completed'];
 function phase(request:ProgressRequest) {
@@ -24,7 +24,7 @@ export default function WorkProgress({requests,demo,role,onNewRequest,onCorrecti
   async function sendCorrection(request:ProgressRequest) {
     if(message.trim().length<4 || message.trim().length>500)return;
     setPending(true);
-    try {await onCorrection(request,message.trim());setOpen(null);setMessage('');}
+    try {const saved=await onCorrection(request,message.trim());if(saved){setOpen(null);setMessage('');}}
     finally {setPending(false);}
   }
   return <section className='work-panel' aria-label={agency?'Codeedge agency work queue':'Your growth requests'}>

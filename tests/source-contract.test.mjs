@@ -14,7 +14,7 @@ test('all private endpoints require SDK auth middleware',()=>{
  assert.match(entry,/requireAuth/);
 });
 test('workspace lookups and durable keys are server derived',()=>{
- assert.match(routes,/resolveWorkspace\(ctx,db,action\)/);
+ assert.match(routes,/resolveWorkspace\(ctx,db,action,trustedMembership\)/);
  assert.match(routes,/workspace\.ownerUserId/);
  assert.match(routes,/validateImageUpload/);
 });

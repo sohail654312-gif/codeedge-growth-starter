@@ -71,6 +71,8 @@ CREATE TABLE IF NOT EXISTS growth_starter.media_delete_outbox (
   storage_key text NOT NULL,
   state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','processing','done')),
   attempts integer NOT NULL DEFAULT 0,
+  leased_until timestamptz,
+  last_error text,
   queued_at timestamptz NOT NULL DEFAULT now(),
   processed_at timestamptz,
   UNIQUE(workspace_id,media_id),

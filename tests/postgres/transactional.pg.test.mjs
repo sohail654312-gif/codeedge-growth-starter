@@ -165,3 +165,23 @@ test('two distinct cryptographically authenticated HTTP sessions isolate databas
     assert.equal(expired.status,401);
   }finally{await new Promise(resolve=>server.close(resolve));}
 });
+
+test('real DB outbox processes durable image deletion with retry and idempotent completion',async()=>{
+  const first=await store.claimDeleteBatch(1);
+  assert.equal(first.length,1);
+  assert.equal(first[0].workspaceId,wsA);
+  assert.equal(first[0].mediaId,'syntheticImage1');
+  const noDoubleClaim=await store.claimDeleteBatch(1);
+  assert.equal(noDoubleClaim.length,0);
+  await store.retryMediaDeletion({outboxId:first[0].outboxId});
+  const retried=await store.claimDeleteBatch(1);
+  assert.equal(retried.length,1);
+  assert.equal(retried[0].attempts,2);
+  const completed=await store.acknowledgeMediaDeletion({outboxId:retried[0].outboxId,storageKey:retried[0].storageKey});
+  assert.equal(completed.done,true);
+  const done=await pool.query(`SELECT o.state,m.lifecycle FROM growth_starter.media_delete_outbox o
+    JOIN growth_starter.media m ON m.workspace_id=o.workspace_id AND m.id=o.media_id
+    WHERE o.id=$1`,[retried[0].outboxId]);
+  assert.deepEqual([done.rows[0].state,done.rows[0].lifecycle],['done','deleted']);
+  assert.equal((await store.claimDeleteBatch(1)).length,0);
+});

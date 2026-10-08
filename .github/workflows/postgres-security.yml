@@ -30,11 +30,12 @@ jobs:
         with:
           node-version: '22'
       - name: Install pinned test-only PostgreSQL driver
-        run: npm install --no-save --no-package-lock --ignore-scripts pg@8.13.3
+        run: npm install --no-save --no-package-lock --ignore-scripts pg@8.13.3 sharp@0.33.5
       - name: Syntax check PostgreSQL and identity modules
         run: |
           node --check backend/postgres-store.mjs
           node --check backend/verified-identity.mjs
           node --check backend/media-gate.mjs
+          node --check backend/image-inspector.mjs
       - name: Real database transactions and signed synthetic HTTP sessions
         run: node --test --test-concurrency=1 tests/postgres/*.test.mjs

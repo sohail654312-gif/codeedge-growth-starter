@@ -85,6 +85,37 @@ export function createPostgresStore({pool,maxRetries=2}) {
               [ws,id,v.status,v.version,v.reviewedBy||null,v.decidedBy||null,new Date(v.updatedAt),v.version-1]);
             if(r.rowCount!==1)throw new DomainError('Request version changed.',409);
           },
+          claimDeletions:async limit=>{
+            const found=await query(`WITH chosen AS (
+              SELECT id FROM growth_starter.media_delete_outbox
+              WHERE state='pending' OR (state='processing' AND leased_until<now())
+              ORDER BY id FOR UPDATE SKIP LOCKED LIMIT $1
+            ) UPDATE growth_starter.media_delete_outbox o SET state='processing',
+              attempts=attempts+1,leased_until=now()+interval '5 minutes',last_error=NULL
+              FROM chosen WHERE o.id=chosen.id
+              RETURNING o.id,o.workspace_id,o.media_id,o.storage_key,o.attempts`,[limit]);
+            return found.rows.map(x=>({outboxId:x.id,workspaceId:x.workspace_id,
+              mediaId:x.media_id,storageKey:x.storage_key,attempts:x.attempts}));
+          },
+          confirmDeleted:async(id,key)=>{
+            const row=await query(`SELECT * FROM growth_starter.media_delete_outbox
+              WHERE id=$1 AND storage_key=$2 AND state='processing' FOR UPDATE`,[id,key]);
+            if(!row.rows.length)throw new DomainError('Deletion job not leased.',409);
+            const event=row.rows[0];
+            await query(`UPDATE growth_starter.media SET lifecycle='deleted',consent_state='withdrawn'
+              WHERE workspace_id=$1 AND id=$2 AND lifecycle='delete_pending'`,
+              [event.workspace_id,event.media_id]);
+            await query(`UPDATE growth_starter.media_delete_outbox
+              SET state='done',leased_until=NULL,processed_at=now() WHERE id=$1`,[id]);
+            return {done:true};
+          },
+          retryDeletion:async id=>{
+            const row=await query(`UPDATE growth_starter.media_delete_outbox
+              SET state='pending',leased_until=NULL,last_error='storage delete unavailable'
+              WHERE id=$1 AND state='processing' RETURNING id`,[id]);
+            if(!row.rowCount)throw new DomainError('Deletion job not leased.',409);
+            return {retry:true};
+          },
           lockMedia:async(ws,id)=>(await query(`SELECT * FROM growth_starter.media
             WHERE workspace_id=$1 AND id=$2 FOR UPDATE`,[ws,id])).rows[0]||null,
           tombstoneMedia:async(ws,id)=>{
@@ -116,6 +147,21 @@ export function createPostgresStore({pool,maxRetries=2}) {
     readMembership:async(ws,user)=>rowMembership(await single('SELECT * FROM growth_starter.memberships WHERE workspace_id=$1 AND user_id=$2',[ws,user])),
     listUserMemberships:async user=>(await pool.query(`SELECT * FROM growth_starter.memberships
       WHERE user_id=$1 AND state='active' ORDER BY workspace_id LIMIT 25`,[user])).rows.map(rowMembership),
+    async claimDeleteBatch(limit=5) {
+      if(!Number.isInteger(limit)||limit<1||limit>20)
+        throw new DomainError('Invalid deletion batch size.',400);
+      return transaction(async tx=>{
+        // Claim/lease must be transactional to support idempotent retry.
+        const result=await tx.claimDeletions(limit);
+        return result;
+      });
+    },
+    async acknowledgeMediaDeletion({outboxId,storageKey}) {
+      return transaction(async tx=>tx.confirmDeleted(outboxId,storageKey));
+    },
+    async retryMediaDeletion({outboxId}) {
+      return transaction(async tx=>tx.retryDeletion(outboxId));
+    },
     async getReadyMedia({workspaceId,id}) {
       const record=await single(`SELECT storage_key,content_type FROM growth_starter.media
         WHERE workspace_id=$1 AND id=$2 AND lifecycle='stored'

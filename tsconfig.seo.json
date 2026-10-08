@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {"noEmit": true},
+  "include": ["src/SeoGrowthManager.tsx", "backend/seo-growth.d.mts", "backend/seo-fixtures.d.mts"]
+}

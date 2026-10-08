@@ -1,0 +1,41 @@
+name: Growth Starter offline SEO UI typecheck
+on:
+  push:
+    branches: [engineering/phase2-core-security]
+    paths:
+      - 'src/SeoGrowthManager.tsx'
+      - 'src/seo-growth.css'
+      - 'backend/seo-*.mjs'
+      - 'backend/seo-*.d.mts'
+      - 'tsconfig.seo.json'
+      - '.github/workflows/seo-ui-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/SeoGrowthManager.tsx'
+      - 'src/seo-growth.css'
+      - 'backend/seo-*.mjs'
+      - 'backend/seo-*.d.mts'
+      - 'tsconfig.seo.json'
+      - '.github/workflows/seo-ui-check.yml'
+permissions:
+  contents: read
+jobs:
+  seo-ui-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned frontend framework and TS dependencies from package manifest
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-fund --no-audit
+      - name: Typecheck SEO Growth Manager UI in isolation
+        run: npx tsc --project tsconfig.seo.json --noEmit
+      - name: Validate offline SEO domain and fixture scripts
+        run: |
+          node --check backend/seo-growth.mjs
+          node --check backend/seo-fixtures.mjs
+          node --check backend/seo-demo.mjs
+          node --test tests/seo-growth.test.mjs

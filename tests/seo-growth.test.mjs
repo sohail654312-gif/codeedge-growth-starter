@@ -46,7 +46,7 @@ test('unsafe network URLs and live crawl attempts are rejected',()=>{
  for(const url of ['http://127.0.0.1','https://127.0.0.1','https://localhost','https://10.0.0.9','https://metadata.internal','https://[::1]']){
    assert.throws(()=>runOfflineGrowthReport({...base,business:{...f.business,website:url}}));
  }
- assert.throws(()=>runOfflineGrowthReport({...base,pages:[{...f.pages[0],url:'https://foreign.example/'}]}),/same/);
+ assert.throws(()=>runOfflineGrowthReport({...base,pages:[{...f.pages[0],url:'https://foreign.example/'}]}),/declared website origin/);
  assert.throws(()=>requestNetworkCrawl({url:'https://atlas-plumbing.example'}),/disabled/);
 });
 test('duplicate inputs rejected and live publication/integration remain strictly disabled',()=>{

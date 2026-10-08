@@ -67,3 +67,6 @@ See [Phase 2.1 review handoff](PHASE2-1-REVIEW-HANDOFF.md) for exact test separa
 
 ## Phase 2.2 read-only staging security increment
 See [Phase 2.2 handoff](PHASE2-2-HANDOFF.md) and [staging adapter](PHASE2-2-STAGING-BOUNDARY.md). A rotating-key short-session verifier, restricted PostgreSQL **read-only** role and synthetic two-user HTTP/PG tests are in PR #2. Hosted staging, invitation activation, agency edits and media release **remain BLOCKED**. The upload response no longer signs unapproved media. None of this was deployed to production.
+
+## Phase 2.2 restricted-login and private-workspace loading safeguard
+The unmerged engineering branch includes a real NOINHERIT PostgreSQL login test and a fail-closed runtime adapter. A signed-in client now clears synthetic demo data during loading instead of showing fake clinic performance in private mode. See [restricted runtime acceptance](RESTRICTED-RUNTIME-ACCEPTANCE.md) and [Phase 2.2 handoff](PHASE2-2-HANDOFF.md). This is **disposable database and source-level evidence**, not hosted staging acceptance or pilot approval.

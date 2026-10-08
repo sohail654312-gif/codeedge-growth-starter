@@ -51,3 +51,15 @@ Supabase inventory currently lists only other Codeedge projects; no isolated Gro
 
 ## Deployment verdict
 **NO MERGE; NO PRODUCTION DEPLOYMENT; NO BACKGROUND WORKERS; NO REAL PATIENT DATA.** This is a reviewable Phase 2.2 source increment only.
+
+## Follow-on Phase 2.2 acceptance increment — restricted runtime + client loading
+
+- Starting this increment from exact PR head `820a84a9de9ea3f135d91e9eb87088567b0c5f46`; last source increment `ba790fe88859b282080a2ea6637338d6f830bb9c`. After this documentation commit, check actual PR head; prior commit evidence must not be treated as final-head evidence.
+- `backend/staging-restricted-runtime.mjs` now refuses direct privileged/non-login/owner/inheriting DB pools, verifies a separate NOINHERIT account can `SET LOCAL ROLE growth_starter_reader`, whitelists the two read routines, and wraps every query in read-only bounded transactions. No listening gateway may be created by its guarded factory before that verification succeeds.
+- `tests/postgres/restricted-runtime.pg.test.mjs` creates a REAL separate non-owner PostgreSQL LOGIN with a disposable password, confirms direct table reads/writes are denied, and checks distinct signed synthetic users against the restricted gateway. Neither login nor database is a hosted production/staging connection.
+- `src/App.tsx` now clears fictional sample records **before switching into signed-in private mode**; API failures show an error rather than mislabelling example data as genuine business performance. An accessible loading-status banner was added without visual redesign.
+- Verified before documentation commit: [Core safety CI 37790536712](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/37790536712) 41/41 PASS and [Disposable PG CI 37790536612](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/37790536612) 21/21 PASS at `ba790fe88859b282080a2ea6637338d6f830bb9c`.
+- **R1–R7 verdicts unchanged:** read-only secure gateway source is stronger, but no actual Growth Starter staging DB, hosted IdP, two-user hosted acceptance, scanned media, client/agency write operations, or sign-off exists. PostgreSQL SECURITY DEFINER actor arguments remain server-trust sensitive.
+- AppDeploy Phase 2 sandbox `growth-starter-phase-2-qa-sandbox-gve53p` remains previously applied (snapshot recorded `1791455061355`), not redeployed; production Phase 1 unchanged.
+
+Next gate: user approves the Supabase organization and project cost, then creates **new isolated Growth Starter staging**, configures server-only restricted login and a verified-email IdP/session revocation source. Run actual hosted two-account denial acceptance before enabling agency collaboration. This must not reuse any Business OS/MVP database.

@@ -184,8 +184,11 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
             await storage.delete([path]);
             return error('Could not save image metadata.',500);
           }
-          const [signed]=await storage.url([path]);
-          return json({...data,id,url:signed?.url||''},201);
+          // A stored image is NOT an approved asset. Never mint a preview URL
+          // until independent scan, verified rights and consent all pass.
+          return json({id,filename:data.filename,mime:data.mime,
+            createdAt:data.createdAt,consentStatus:data.consentStatus,
+            rightsDeclaredAt:data.rightsDeclaredAt,url:''},201);
         } catch(caught) {
           await storage.delete([path]);
           throw caught;

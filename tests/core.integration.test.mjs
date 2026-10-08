@@ -188,6 +188,10 @@ test('media signatures, extensions and base64 encoding verified before storage',
   assert.equal(ok.status,201);
   assert.ok(x.written[0].path.includes('/'+alice+'/'));
   assert.equal(ok.data.consentStatus,'not_verified');
+  // Upload completion must not produce signed access to unreviewed material.
+  assert.equal(ok.data.url,'');
+  assert.equal(ok.data.path,undefined);
+
 });
 test('overview never signs unverified or foreign-stored media',async()=>{
   const x=fixture();

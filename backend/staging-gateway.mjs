@@ -31,8 +31,32 @@ export function createStagingGateway({ pool, identityVerifier, allowedOrigin = n
     const corsOrigin = origin && origin === allowedOrigin ? allowedOrigin : null;
     try {
       if (origin && !corsOrigin) return reply(res, 403, { error: 'Origin denied.' });
-      if (req.method !== 'GET') return reply(res, 405, { error: 'Read-only staging API.' }, corsOrigin);
       const uri = new URL(req.url || '/', 'http://gateway.invalid');
+      // Browser requests with Authorization are preflighted cross-origin.
+      // A preflight grants only the specified GET + Authorization combination;
+      // it never authenticates the user or runs a database query.
+      if (req.method === 'OPTIONS') {
+        if (!corsOrigin) return reply(res, 403, { error: 'Origin required.' });
+        if (!['/v1/workspaces', '/v1/requests'].includes(uri.pathname))
+          return reply(res, 404, { error: 'Not found.' }, corsOrigin);
+        if (req.headers['access-control-request-method'] !== 'GET')
+          return reply(res, 405, { error: 'Only GET permitted.' }, corsOrigin);
+        const requested = (req.headers['access-control-request-headers'] || '')
+          .split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+        if (requested.length !== 1 || requested[0] !== 'authorization')
+          return reply(res, 403, { error: 'Header denied.' }, corsOrigin);
+        res.writeHead(204, {
+          'access-control-allow-origin': corsOrigin,
+          'access-control-allow-methods': 'GET',
+          'access-control-allow-headers': 'Authorization',
+          'access-control-max-age': '300',
+          'vary': 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+        });
+        return res.end();
+      }
+      if (req.method !== 'GET') return reply(res, 405, { error: 'Read-only staging API.' }, corsOrigin);
       if (uri.pathname === '/healthz') return reply(res, 200, { status: 'ok', mode: 'staging-read-only' }, corsOrigin);
       if (!['/v1/workspaces', '/v1/requests'].includes(uri.pathname))
         return reply(res, 404, { error: 'Not found.' }, corsOrigin);

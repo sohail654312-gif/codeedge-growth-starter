@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { auth, api } from '@appdeploy/client';
+import ClinicOverview from './ClinicOverview';
 import {
   Activity,
   ArrowRight,
@@ -82,11 +83,11 @@ type Tab =
 type Modal = 'lead' | 'request' | 'profile' | null;
 const sample: Overview = {
   profile: {
-    name: 'Aesthetica Clinic',
-    industry: 'Aesthetic clinic',
-    city: 'Peshawar',
-    website: 'aesthetica.example',
-    goal: 'More consultations through Google and Instagram',
+    name: 'Dr Ikram Wazir',
+    industry: 'ENT & Rhinoplasty',
+    city: 'Bannu',
+    website: 'https://dr-ikram-wazir-codeedge-concept-j5vowo.v2.appdeploy.ai/',
+    goal: 'Grow ethical ENT and rhinoplasty enquiries with clearer online information',
   },
   enquiries: [
     {
@@ -209,7 +210,7 @@ function App() {
   });
   const [profile, setProfile] = useState({
     name: '',
-    industry: 'Aesthetic clinic',
+    industry: 'Medical practice',
     city: '',
     website: '',
     goal: '',
@@ -470,20 +471,34 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-help">
-            <div className="help-icon">
-              <Sparkles size={20} />
+          {demo ? (
+            <div className="doctor-sidebar-card">
+              <div className="doctor-avatar">IW</div>
+              <strong>Dr Ikram Wazir</strong>
+              <span>ENT &amp; Rhinoplasty Surgeon</span>
+              <span>Bannu, Khyber Pakhtunkhwa</span>
+              <div className="sidebar-card-divider" />
+              <small>YOUR CODEEDGE GROWTH PARTNER</small>
+              <p>More visibility. Better enquiries. Simpler growth.</p>
+              <a
+                href="https://dr-ikram-wazir-codeedge-concept-j5vowo.v2.appdeploy.ai/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View website concept <ArrowRight size={14} />
+              </a>
             </div>
-            <strong>Here to help you grow</strong>
-            <p>
-              Codeedge handles the complicated stuff. You focus on your
-              customers.
-            </p>
-            <button onClick={() => guard('request')}>
-              Request something <ArrowRight size={15} />
-            </button>
-          </div>
-          <div className="sidebar-footer">
+          ) : (
+            <div className="sidebar-help">
+              <div className="help-icon"><Sparkles size={20} /></div>
+              <strong>Here to help you grow</strong>
+              <p>Codeedge handles the complicated stuff. You focus on your customers.</p>
+              <button onClick={() => guard('request')}>
+                Request something <ArrowRight size={15} />
+              </button>
+            </div>
+          )}
+        <div className="sidebar-footer">
             <div className="mini-avatar">
               {(user?.name || 'G').slice(0, 1).toUpperCase()}
             </div>
@@ -554,255 +569,18 @@ function App() {
         )}
         <div className="page">
           {tab === 'Overview' && (
-            <>
-              <div className="intro-line">
-                <div>
-                  <div className="eyebrow">
-                    <span className="eyebrow-dot" /> YOUR GROWTH, AT A GLANCE
-                  </div>
-                  <h1>
-                    Good afternoon<span className="wave"> ✳</span>
-                  </h1>
-                  <p>
-                    Here's what's happening with {currentName.toLowerCase()}.
-                  </p>
-                </div>
-                <button
-                  className="outline-button"
-                  onClick={() => guard('profile')}
-                >
-                  <Settings size={16} />{' '}
-                  {data.profile
-                    ? 'Edit business profile'
-                    : 'Set up your business'}
-                </button>
-              </div>
-              {!demo && !data.profile && (
-                <div className="onboard-strip">
-                  <Sparkles size={23} />
-                  <div>
-                    <strong>First, tell us about your business</strong>
-                    <p>
-                      Three basic details help us set up your growth workspace.
-                    </p>
-                  </div>
-                  <button onClick={() => guard('profile')}>
-                    Get started <ArrowRight size={15} />
-                  </button>
-                </div>
-              )}
-              <div className="stat-grid">
-                {cards.map(c => (
-                  <div className="stat-card" key={c.title}>
-                    <div className="stat-top">
-                      <span>{c.title}</span>
-                      <div className={'stat-icon ' + c.tone}>
-                        <c.icon size={20} />
-                      </div>
-                    </div>
-                    <div className="stat-value">
-                      {c.value.toString().padStart(2, '0')}
-                    </div>
-                    <div className="stat-foot">
-                      <span className={'tiny-mark ' + c.tone}>
-                        <ArrowUpRight size={13} />
-                      </span>
-                      {c.desc}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="section-grid">
-                <section className="panel performance">
-                  <div className="panel-header">
-                    <div>
-                      <h2>Growth overview</h2>
-                      <p>
-                        {demo
-                          ? 'Illustrative performance data'
-                          : 'Activity based on enquiries you have logged'}
-                      </p>
-                    </div>
-                    <span className="pill-subtle">
-                      <BarChart3 size={14} /> Last 7 days
-                    </span>
-                  </div>
-                  <div className="graph-head">
-                    <strong>
-                      {enquiries.length} <small>enquiries tracked</small>
-                    </strong>
-                    <span>
-                      <i /> Enquiries
-                    </span>
-                  </div>
-                  <div className="chart-area">
-                    {[30, 50, 36, 67, 48, 83, 65].map((height, i) => (
-                      <div key={i} className="chart-col">
-                        <div
-                          className="chart-bar"
-                          style={{
-                            height:
-                              (demo
-                                ? height
-                                : Math.max(
-                                    8,
-                                    ((i + 1) * 9 + enquiries.length * 4) % 70
-                                  )) + '%',
-                          }}
-                        />
-                        <span>
-                          {['Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'][i]}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  {!demo && (
-                    <p className="small-note">
-                      Activity chart is illustrative until real event tracking
-                      is connected.
-                    </p>
-                  )}
-                </section>
-                <section className="panel plan">
-                  <div className="panel-header">
-                    <div>
-                      <h2>Your growth plan</h2>
-                      <p>One clear step at a time</p>
-                    </div>
-                    <span className="three-dots">
-                      <MoreHorizontal size={21} />
-                    </span>
-                  </div>
-                  <div className="timeline">
-                    {[
-                      {
-                        title: 'Get your business online',
-                        desc: 'Website, brand details and contact routes',
-                        done: !!data.profile || demo,
-                      },
-                      {
-                        title: 'Build local visibility',
-                        desc: 'Google Business Profile, SEO and AEO',
-                        done: demo,
-                      },
-                      {
-                        title: 'Create content consistently',
-                        desc: 'Real photos, helpful posts and short videos',
-                        done: false,
-                      },
-                      {
-                        title: 'Turn interest into enquiries',
-                        desc: 'Track leads and improve conversions',
-                        done: false,
-                      },
-                    ].map((x, i) => (
-                      <div className="timeline-step" key={i}>
-                        <div className={'step-mark ' + (x.done ? 'done' : '')}>
-                          {x.done ? <Check size={15} /> : i + 1}
-                        </div>
-                        <div>
-                          <strong>{x.title}</strong>
-                          <p>{x.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    className="panel-link"
-                    onClick={() => setTab('Google & SEO')}
-                  >
-                    View your roadmap <ArrowRight size={16} />
-                  </button>
-                </section>
-              </div>
-              <div className="section-grid bottom-grid">
-                <section className="panel">
-                  <div className="panel-header">
-                    <div>
-                      <h2>Recent enquiries</h2>
-                      <p>Every opportunity in one place</p>
-                    </div>
-                    <button
-                      className="text-link"
-                      onClick={() => setTab('Enquiries')}
-                    >
-                      View all <ArrowRight size={15} />
-                    </button>
-                  </div>
-                  <div className="lead-list">
-                    {enquiries.slice(0, 3).map((x, i) => (
-                      <div className="lead-mini" key={x.id}>
-                        <div className={'lead-avatar lead-' + (i % 3)}>
-                          {x.name.slice(0, 1)}
-                        </div>
-                        <div>
-                          <strong>{x.name}</strong>
-                          <span>
-                            {x.service} · {x.channel}
-                          </span>
-                        </div>
-                        <span
-                          className={'status status-' + x.status.toLowerCase()}
-                        >
-                          {x.status}
-                        </span>
-                      </div>
-                    ))}
-                    {enquiries.length === 0 && (
-                      <div className="empty-small">
-                        No enquiries yet. Add the first one to start tracking.
-                      </div>
-                    )}
-                  </div>
-                  <button className="panel-link" onClick={() => guard('lead')}>
-                    <Plus size={15} /> Log an enquiry
-                  </button>
-                </section>
-                <section className="panel">
-                  <div className="panel-header">
-                    <div>
-                      <h2>Codeedge is on it</h2>
-                      <p>Your latest growth requests</p>
-                    </div>
-                    <span className="badge-purple">
-                      <Sparkles size={14} /> Managed for you
-                    </span>
-                  </div>
-                  <div className="task-list">
-                    {requests.slice(0, 3).map(r => (
-                      <div className="task-row" key={r.id}>
-                        <div className="task-icon">
-                          <FileText size={18} />
-                        </div>
-                        <div>
-                          <strong>{r.title}</strong>
-                          <span>{r.kind}</span>
-                        </div>
-                        <span
-                          className={
-                            'task-status ' +
-                            (r.status === 'Completed' ? 'complete' : '')
-                          }
-                        >
-                          {r.status}
-                        </span>
-                      </div>
-                    ))}
-                    {requests.length === 0 && (
-                      <div className="empty-small">
-                        No requests yet. Tell us what you'd like help with.
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    className="panel-link"
-                    onClick={() => guard('request')}
-                  >
-                    <Plus size={15} /> New growth request
-                  </button>
-                </section>
-              </div>
-            </>
+            <ClinicOverview
+              demo={demo}
+              businessName={currentName}
+              profile={data.profile}
+              enquiries={enquiries}
+              requests={requests}
+              assets={data.assets}
+              openProfile={() => guard('profile')}
+              openLead={() => guard('lead')}
+              openRequest={() => guard('request')}
+              goTo={setTab}
+            />
           )}
           {tab === 'Enquiries' && (
             <>
@@ -1236,6 +1014,7 @@ function App() {
                           setProfile({ ...profile, industry: e.target.value })
                         }
                       >
+                        <option>ENT & Rhinoplasty</option>
                         <option>Aesthetic clinic</option>
                         <option>Medical practice</option>
                         <option>Plumbing & heating</option>

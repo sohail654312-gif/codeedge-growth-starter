@@ -7,15 +7,20 @@
       "demo dashboard",
       "demo data isolation",
       "navigation",
-      "enquiry display"
+      "enquiry display",
+      "Dr Ikram Wazir clinic-specific demo",
+      "website concept link",
+      "navy white dashboard",
+      "illustrative metrics disclaimer"
     ],
     "description": "Demo shows clearly marked example information with no claim of live client data.",
     "steps": [
       "Open the app without signing in",
-      "Confirm DEMO WORKSPACE is visible and sample enquiry cards are shown",
-      "Select Enquiries from the sidebar and inspect the example records"
+      "Confirm the dashboard greets Dr Ikram Wazir and shows DEMO WORKSPACE and a personalised demo disclaimer",
+      "Check four clinic metrics, enquiry trend, recent activity and website concept card",
+      "Select Enquiries from navigation"
     ],
-    "expected": "The dashboard and enquiry list show sample content and DEMO WORKSPACE remains visible."
+    "expected": "Dr Ikram Wazir appears in the labelled sample dashboard; sample metric cards, clinic activity and website concept are visible; sample enquiries remain browseable."
   },
   {
     "name": "Demo cannot write client records",
@@ -23,15 +28,16 @@
     "covers": [
       "unauthenticated write guard",
       "demo read-only validation",
-      "mobile navigation"
+      "mobile navigation",
+      "mobile clinic dashboard styling"
     ],
     "description": "Actions in sample mode must request authentication and not mutate sample data.",
     "steps": [
-      "Open the app without signing in on mobile",
-      "Open the Enquiries tab and select Add enquiry",
-      "Observe the message and return to Overview"
+      "Open the unsigned demo on a mobile screen",
+      "Confirm Dr Ikram Wazir is visible with sample metrics and the bottom mobile navigation",
+      "Tap Enquiries then Add enquiry"
     ],
-    "expected": "A read-only sample mode message appears and the original sample enquiries are unchanged."
+    "expected": "Mobile design shows the clinic information without overflow, and attempt to add an enquiry is blocked with the read-only sample mode message."
   },
   {
     "name": "Manage a private business profile and enquiry",

@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS growth_starter.media (
   size_bytes integer NOT NULL CHECK(size_bytes BETWEEN 1 AND 3145728),
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY(workspace_id,id),
-  CONSTRAINT ws_storage_key CHECK(storage_key LIKE ('growth-starter/' || workspace_id || '/%'))
+  CONSTRAINT ws_storage_key CHECK(left(storage_key,length('growth-starter/' || workspace_id || '/')) = ('growth-starter/' || workspace_id || '/'))
 );
 CREATE TABLE IF NOT EXISTS growth_starter.media_delete_outbox (
   id bigserial PRIMARY KEY,

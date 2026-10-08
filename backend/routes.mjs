@@ -168,6 +168,7 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
       async ctx => safe(ctx,'asset:upload',async workspace=>{
         // Shared-media quotas and consent need a transactional service.
         if(workspace.role!=='owner') return error('Shared media uploads are not yet enabled.',503);
+        if(ctx.body?.rightsDeclared!==true) throw new DomainError('Media rights declaration required.',400);
         const file=validateImageUpload(ctx.body);
         const key=tableFor('assets',workspace.ownerUserId);
         // Soft quota guard, not an atomic cross-request rate limit.
@@ -176,7 +177,7 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
         const path='growth-starter/'+workspace.ownerUserId+'/'+cryptoRandomUUID()+'.'+file.extension;
         const [saved]=await storage.write([{path,content:file.base64,contentType:file.mime}]);
         if(!saved) return error('Could not upload image.',500);
-        const data={filename:file.filename,mime:file.mime,path,createdAt:new Date().toISOString(),consentStatus:'not_verified'};
+        const data={filename:file.filename,mime:file.mime,path,createdAt:new Date().toISOString(),consentStatus:'not_verified',rightsDeclaredAt:new Date().toISOString()};
         try {
           const [id]=await db.add(key,[data]);
           if(!id) {

@@ -185,3 +185,9 @@ test('real DB outbox processes durable image deletion with retry and idempotent 
   assert.deepEqual([done.rows[0].state,done.rows[0].lifecycle],['done','deleted']);
   assert.equal((await store.claimDeleteBatch(1)).length,0);
 });
+test('database storage path prefix constraint compares literal tenant ID exactly',async()=>{
+ await assert.rejects(pool.query(`INSERT INTO growth_starter.media
+ (workspace_id,id,storage_key,filename,content_type,size_bytes)
+ VALUES ($1,'badprefix',$2,'badprefix.png','image/png',120)`,
+ [wsB,'growth-starter/wx_'+ownerB.userId+'/badprefix.png']),error=>error.code==='23514');
+});

@@ -52,3 +52,8 @@ test('client website page and agency desk maintain honest privilege boundaries',
  assert.match(pages,/security gate pending/);
  assert.match(pages,/rankings are not connected|search rankings are not connected/i);
 });
+test('server requires media rights and never automatically marks uploaded images approved',()=>{
+ const routes=readFileSync('backend/routes.mjs','utf8');
+ assert.match(routes,/rightsDeclared!==true/);
+ assert.match(routes,/consentStatus:'not_verified'/);
+});

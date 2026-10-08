@@ -410,6 +410,7 @@ function App() {
         filename: file.name,
         mime: file.type,
         content,
+        rightsDeclared: true,
       });
       await refresh();
       flash('Image saved privately. Preview access stays locked until consent and safety review.');

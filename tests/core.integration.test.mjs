@@ -184,7 +184,7 @@ test('media signatures, extensions and base64 encoding verified before storage',
   }
   assert.equal(x.written.length,0);
   assert.equal(x.rows(tableFor('assets',alice)).length,0);
-  const ok=await x.call('POST','/api/assets',{user:alice,body:{filename:'clinic-demo.png',mime:'image/png',content:png}});
+  const ok=await x.call('POST','/api/assets',{user:alice,body:{filename:'clinic-demo.png',mime:'image/png',content:png,rightsDeclared:true}});
   assert.equal(ok.status,201);
   assert.ok(x.written[0].path.includes('/'+alice+'/'));
   assert.equal(ok.data.consentStatus,'not_verified');
@@ -235,7 +235,7 @@ test('staff cannot approve a request and client cannot claim completion',async()
 });
 test('private image delete checks role, workspace, and stored owner path',async()=>{
   const x=fixture();
-  const created=await x.call('POST','/api/assets',{user:alice,body:{filename:'demo.jpg',mime:'image/jpeg',content:jpeg}});
+  const created=await x.call('POST','/api/assets',{user:alice,body:{filename:'demo.jpg',mime:'image/jpeg',content:jpeg,rightsDeclared:true}});
   const id=created.data.id;
   const denied=await x.call('DELETE','/api/assets/:id',{user:bob,params:{id},query:{workspaceId:workspaceA}});
   assert.equal(denied.status,403);
@@ -273,4 +273,14 @@ test('shared client cannot upload to an owner collection without atomic media li
   const upload=await x.call('POST','/api/assets',{user:bob,query:{workspaceId:workspaceA},body:{filename:'demo.jpg',mime:'image/jpeg',content:jpeg}});
   assert.equal(upload.status,503);
   assert.equal(x.written.length,0);
+});
+test('media rights declaration is checked by the server, not only the browser',async()=>{
+ const x=fixture();
+ const denied=await x.call('POST','/api/assets',{user:alice,body:{filename:'unconsented.jpg',mime:'image/jpeg',content:jpeg}});
+ assert.equal(denied.status,400);
+ assert.equal(x.written.length,0);
+ const granted=await x.call('POST','/api/assets',{user:alice,body:{filename:'consented.jpg',mime:'image/jpeg',content:jpeg,rightsDeclared:true}});
+ assert.equal(granted.status,201);
+ assert.equal(typeof granted.data.rightsDeclaredAt,'string');
+ assert.equal(granted.data.consentStatus,'not_verified');
 });

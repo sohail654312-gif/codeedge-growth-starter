@@ -88,3 +88,27 @@ test('staging session revocation, spoofed JWT role and writes fail closed',async
   assert.equal((await call(users[0],'/v1/workspaces',{method:'DELETE'})).status,405);
   assert.equal((await call(users[0],'/v1/workspaces',{token:tokenFor(users[0],{exp:epoch-1})})).status,401);
 });
+
+test('reader-role table privilege drift aborts gateway preflight before serving users',async()=>{
+  // Deliberate permission drift occurs ONLY in disposable CI.
+  await admin.query('GRANT SELECT ON growth_starter.workspaces TO growth_starter_reader');
+  try{
+    await assert.rejects(createRestrictedStagingPool({rawPool:limited}),e=>e.status===503);
+  }finally{
+    await admin.query('REVOKE SELECT ON growth_starter.workspaces FROM growth_starter_reader');
+  }
+  // After revocation, a fresh preflight must succeed again.
+  assert.equal((await createRestrictedStagingPool({rawPool:limited})).capabilities.readOnly,true);
+});
+test('unapproved extra database routine EXECUTE privilege blocks the staging gateway',async()=>{
+  await admin.query('CREATE FUNCTION growth_starter.gs_unapproved_test_routine() RETURNS integer LANGUAGE sql AS $$ SELECT 1 $$');
+  await admin.query('REVOKE ALL ON FUNCTION growth_starter.gs_unapproved_test_routine() FROM PUBLIC');
+  await admin.query('GRANT EXECUTE ON FUNCTION growth_starter.gs_unapproved_test_routine() TO growth_starter_reader');
+  try{
+    await assert.rejects(createRestrictedStagingPool({rawPool:limited}),e=>e.status===503);
+  }finally{
+    await admin.query('REVOKE ALL ON FUNCTION growth_starter.gs_unapproved_test_routine() FROM growth_starter_reader');
+    await admin.query('DROP FUNCTION growth_starter.gs_unapproved_test_routine()');
+  }
+  assert.equal((await createRestrictedStagingPool({rawPool:limited})).capabilities.readOnly,true);
+});

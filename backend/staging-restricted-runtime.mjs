@@ -42,8 +42,34 @@ export async function createRestrictedStagingPool({ rawPool }) {
             OR has_table_privilege(current_user,c.oid,'INSERT')
             OR has_table_privilege(current_user,c.oid,'UPDATE')
             OR has_table_privilege(current_user,c.oid,'DELETE'))
-        ) AS direct_table_access
-      FROM pg_roles r WHERE r.rolname=current_user
+        ) AS direct_table_access,
+        rr.rolcanlogin AS reader_can_login,
+        rr.rolsuper AS reader_super,
+        rr.rolbypassrls AS reader_bypassrls,
+        rr.rolcreaterole AS reader_create_role,
+        rr.rolcreatedb AS reader_create_db,
+        rr.rolinherit AS reader_inherit,
+        has_schema_privilege('growth_starter_reader','growth_starter','CREATE') AS reader_can_create,
+        EXISTS (
+          SELECT 1 FROM pg_class c JOIN pg_namespace n ON c.relnamespace=n.oid
+          WHERE n.nspname='growth_starter' AND c.relkind IN ('r','p','v','m','f')
+          AND (has_table_privilege('growth_starter_reader',c.oid,'SELECT')
+            OR has_table_privilege('growth_starter_reader',c.oid,'INSERT')
+            OR has_table_privilege('growth_starter_reader',c.oid,'UPDATE')
+            OR has_table_privilege('growth_starter_reader',c.oid,'DELETE'))
+        ) AS reader_direct_table_access,
+        EXISTS (
+          SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace=n.oid
+          WHERE n.nspname='growth_starter'
+          AND has_function_privilege('growth_starter_reader',p.oid,'EXECUTE')
+          AND NOT (
+            COALESCE(p.oid=to_regprocedure('growth_starter.staging_list_workspaces(text)'),false)
+            OR COALESCE(p.oid=to_regprocedure('growth_starter.staging_list_requests(text,text,integer)'),false)
+            OR COALESCE(p.oid=to_regprocedure('growth_starter.staging_session_active(text,text,text)'),false)
+          )
+        ) AS reader_extra_functions
+      FROM pg_roles r CROSS JOIN pg_roles rr
+      WHERE r.rolname=current_user AND rr.rolname='growth_starter_reader'
     `;
     const result = await conn.query(query);
     const r = result.rows?.[0];
@@ -52,7 +78,11 @@ export async function createRestrictedStagingPool({ rawPool }) {
         r.rolsuper || r.rolbypassrls || r.rolcreatedb ||
         r.rolcreaterole || r.rolreplication || r.rolinherit ||
         !r.can_set_reader || r.can_create_db_objects ||
-        r.can_create_schema_objects || r.direct_table_access) fail();
+        r.can_create_schema_objects || r.direct_table_access ||
+        r.reader_can_login || r.reader_super || r.reader_bypassrls ||
+        r.reader_create_role || r.reader_create_db || r.reader_inherit ||
+        r.reader_can_create || r.reader_direct_table_access ||
+        r.reader_extra_functions) fail();
 
     // Prove the runtime can only enter the reader role for read-only statements.
     await conn.query('BEGIN READ ONLY');

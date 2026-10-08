@@ -38,6 +38,11 @@ function fixture() {
       const idx=list.findIndex(x=>x.id===id);
       if(idx<0)return false;
       list[idx]={...record,id};return true;
+    }),
+    delete:async(key,ids)=>ids.map(id=>{
+      const list=rows(key);const idx=list.findIndex(x=>x.id===id);
+      if(idx<0)return false;
+      list.splice(idx,1);return true;
     })
   };
   const storage={
@@ -195,4 +200,49 @@ test('media upload cannot cross account boundary or grant itself membership',asy
   r=await x.call('GET','/api/workspaces',{user:bob});
   assert.deepEqual(r.data.workspaces,[{workspaceId:workspaceB,role:'owner'}]);
   assert.equal(r.data.invitesEnabled,false);
+});
+test('agency progress and client approval require valid state transitions',async()=>{
+  const x=fixture();
+  const a=await x.call('POST','/api/requests',{user:alice,body:{title:'Poster',kind:'Social content'}});
+  const id=a.data.id;
+  let invalid=await x.call('PUT','/api/requests/:id/status',{user:alice,params:{id},body:{status:'Published'}});
+  assert.equal(invalid.status,409);
+  let a1=await x.call('PUT','/api/requests/:id/status',{user:alice,params:{id},body:{status:'In progress'}});
+  assert.equal(a1.status,200);
+  let a2=await x.call('PUT','/api/requests/:id/status',{user:alice,params:{id},body:{status:'Awaiting approval'}});
+  assert.equal(a2.status,200);
+  let a3=await x.call('POST','/api/requests/:id/decision',{user:alice,params:{id},body:{decision:'Changes requested'}});
+  assert.equal(a3.status,200);
+  assert.equal(a3.data.status,'Changes requested');
+  let review=await x.call('PUT','/api/requests/:id/status',{user:alice,params:{id},body:{status:'In progress'}});
+  assert.equal(review.status,200);
+  await x.call('PUT','/api/requests/:id/status',{user:alice,params:{id},body:{status:'Awaiting approval'}});
+  let approved=await x.call('POST','/api/requests/:id/decision',{user:alice,params:{id},body:{decision:'Approved'}});
+  assert.equal(approved.status,200);
+  let done=await x.call('PUT','/api/requests/:id/status',{user:alice,params:{id},body:{status:'Completed'}});
+  assert.equal(done.status,200);
+  assert.equal(x.rows(tableFor('requests',alice))[0].status,'Completed');
+});
+test('staff cannot approve a request and client cannot claim completion',async()=>{
+  const x=fixture();
+  await x.db.add(tableFor('memberships',bob),[{userId:bob,ownerUserId:alice,workspaceId:workspaceA,role:'staff',state:'active'}]);
+  const request=await x.call('POST','/api/requests',{user:alice,body:{title:'Google SEO',kind:'Local SEO'}});
+  const decision=await x.call('POST','/api/requests/:id/decision',{user:bob,query:{workspaceId:workspaceA},params:{id:request.data.id},body:{decision:'Approved'}});
+  assert.equal(decision.status,403);
+  const a=await x.call('PUT','/api/requests/:id/status',{user:bob,query:{workspaceId:workspaceA},params:{id:request.data.id},body:{status:'In progress'}});
+  assert.equal(a.status,200);
+  const foreign=await x.call('PUT','/api/requests/:id/status',{user:bob,params:{id:request.data.id},body:{status:'Awaiting approval'}});
+  assert.equal(foreign.status,404);
+});
+test('private image delete checks role, workspace, and stored owner path',async()=>{
+  const x=fixture();
+  const created=await x.call('POST','/api/assets',{user:alice,body:{filename:'demo.jpg',mime:'image/jpeg',content:jpeg}});
+  const id=created.data.id;
+  const denied=await x.call('DELETE','/api/assets/:id',{user:bob,params:{id},query:{workspaceId:workspaceA}});
+  assert.equal(denied.status,403);
+  const foreign=await x.call('DELETE','/api/assets/:id',{user:bob,params:{id}});
+  assert.equal(foreign.status,404);
+  const removed=await x.call('DELETE','/api/assets/:id',{user:alice,params:{id}});
+  assert.equal(removed.status,200);
+  assert.equal(x.rows(tableFor('assets',alice)).length,0);
 });

@@ -1,6 +1,6 @@
 import {
   DomainError, ownerWorkspaceId, tableFor, resolveWorkspace, profileInput,
-  enquiryInput, requestInput, statusInput, pageArgs, validateImageUpload, validGrant
+  enquiryInput, requestInput, statusInput, pageArgs, validateImageUpload, validGrant, reviewRequestTransition, clientRequestDecision, validRecordId
 } from './core.mjs';
 
 // The SDK primitives are dependency-injected so the exact route handlers can
@@ -103,8 +103,7 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
       async ctx => safe(ctx,'enquiry:update',async workspace=>{
         const status=statusInput(ctx.body);
         const key=tableFor('enquiries',workspace.ownerUserId);
-        const id=ctx.params?.id;
-        if(typeof id!=='string'||id.length>128||! /^[a-zA-Z0-9_-]+$/.test(id)) throw new DomainError('Invalid enquiry ID.');
+        const id=validRecordId(ctx.params?.id);
         const [original]=await db.get(key,[id]);
         // An ID can only be edited in the workspace partition selected via authorization.
         if(!original) return error('Enquiry not found.',404);
@@ -120,6 +119,48 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
         const record={...fields,status:'Requested',createdAt:new Date().toISOString()};
         const [id]=await db.add(tableFor('requests',workspace.ownerUserId),[record]);
         return id?json({...record,id},201):error('Could not create request.',500);
+      })
+    ],
+    'PUT /api/requests/:id/status': [
+      protect,
+      async ctx => safe(ctx,'request:review',async workspace=>{
+        const id=validRecordId(ctx.params?.id);
+        const requested=ctx.body?.status;
+        const key=tableFor('requests',workspace.ownerUserId);
+        const [previous]=await db.get(key,[id]);
+        if(!previous)return error('Request not found.',404);
+        const status=reviewRequestTransition(previous.status,requested,workspace.role);
+        const record={...previous,status,updatedAt:new Date().toISOString(),reviewedBy:ctx.user.userId};
+        const [saved]=await db.update(key,[{id,record}]);
+        return saved?json({...record,id}):error('Could not update request.',500);
+      })
+    ],
+    'POST /api/requests/:id/decision': [
+      protect,
+      async ctx => safe(ctx,'request:decide',async workspace=>{
+        const id=validRecordId(ctx.params?.id);
+        const key=tableFor('requests',workspace.ownerUserId);
+        const [previous]=await db.get(key,[id]);
+        if(!previous)return error('Request not found.',404);
+        const status=clientRequestDecision(previous.status,ctx.body?.decision,workspace.role);
+        const record={...previous,status,updatedAt:new Date().toISOString(),decidedBy:ctx.user.userId};
+        const [saved]=await db.update(key,[{id,record}]);
+        return saved?json({...record,id}):error('Could not decide request.',500);
+      })
+    ],
+    'DELETE /api/assets/:id': [
+      protect,
+      async ctx => safe(ctx,'asset:delete',async workspace=>{
+        const id=validRecordId(ctx.params?.id);
+        const key=tableFor('assets',workspace.ownerUserId);
+        const [existing]=await db.get(key,[id]);
+        if(!existing)return error('Image not found.',404);
+        const prefix='growth-starter/'+workspace.ownerUserId+'/';
+        if(typeof existing.path!=='string'||!existing.path.startsWith(prefix)) return error('Stored media path is not authorized.',403);
+        const [removed]=await storage.delete([existing.path]);
+        if(!removed)return error('Could not delete image.',500);
+        const [deleted]=await db.delete(key,[id]);
+        return deleted?json({deleted:true,id}):error('Image deleted, but metadata cleanup needs support.',500);
       })
     ],
     'POST /api/assets': [

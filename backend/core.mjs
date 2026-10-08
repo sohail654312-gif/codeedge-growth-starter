@@ -3,13 +3,13 @@
 export const ROLES = Object.freeze(['owner', 'agency_admin', 'staff', 'client']);
 export const ACTIONS = Object.freeze([
   'overview:read', 'profile:write', 'enquiry:create', 'enquiry:update',
-  'request:create', 'request:review', 'asset:upload', 'members:manage'
+  'request:create', 'request:review', 'request:decide', 'asset:upload', 'asset:delete', 'members:manage'
 ]);
 const permissions = Object.freeze({
   owner: ACTIONS,
-  agency_admin: ACTIONS.filter(action => action !== 'members:manage'),
+  agency_admin: ACTIONS.filter(action => action !== 'members:manage' && action !== 'request:decide'),
   staff: ['overview:read','profile:write','enquiry:create','enquiry:update','request:create','request:review','asset:upload'],
-  client: ['overview:read','profile:write','enquiry:create','request:create','asset:upload']
+  client: ['overview:read','profile:write','enquiry:create','request:create','request:decide','asset:upload']
 });
 
 export class DomainError extends Error {
@@ -166,4 +166,26 @@ export function validateImageUpload(body) {
   if(bytes.length>3*1024*1024||bytes.length<21||bytes.toString('base64')!==input.content) throw new DomainError('Invalid image size or encoding.');
   if(!signatureMatches(mime,bytes)) throw new DomainError('Image bytes do not match declared format.');
   return {filename:original,mime,base64:input.content,extension:extensions[mime],size:bytes.length};
+}
+
+// Client approval transitions cannot mark any public channel as published.
+export function reviewRequestTransition(current,desired,role) {
+  authorize(role,'request:review');
+  const allowed={
+    'Requested':['In progress'],
+    'Changes requested':['In progress'],
+    'In progress':['Awaiting approval'],
+    'Approved':['Completed']
+  };
+  if(!allowed[current]?.includes(desired)) throw new DomainError('Invalid agency review transition.',409);
+  return desired;
+}
+export function clientRequestDecision(current,decision,role) {
+  authorize(role,'request:decide');
+  if(current!=='Awaiting approval') throw new DomainError('Request is not awaiting client approval.',409);
+  return enumField(decision,'decision',['Approved','Changes requested']);
+}
+export function validRecordId(id) {
+  if(typeof id!=='string'||id.length>128||! /^[a-zA-Z0-9_-]+$/.test(id)) throw new DomainError('Invalid record ID.');
+  return id;
 }

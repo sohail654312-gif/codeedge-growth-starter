@@ -1,0 +1,19 @@
+name: Growth Starter source guards
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  source-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Source contract checks (NOT runtime security or full build)
+        run: node --test tests/source-contract.test.mjs

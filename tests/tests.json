@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Explore sample growth overview and enquiries",
+    "sanity": true,
+    "viewport": "desktop",
+    "covers": [
+      "demo dashboard",
+      "demo data isolation",
+      "navigation",
+      "enquiry display"
+    ],
+    "description": "Demo shows clearly marked example information with no claim of live client data.",
+    "steps": [
+      "Open the app without signing in",
+      "Confirm DEMO WORKSPACE is visible and sample enquiry cards are shown",
+      "Select Enquiries from the sidebar and inspect the example records"
+    ],
+    "expected": "The dashboard and enquiry list show sample content and DEMO WORKSPACE remains visible."
+  },
+  {
+    "name": "Demo cannot write client records",
+    "viewport": "mobile",
+    "covers": [
+      "unauthenticated write guard",
+      "demo read-only validation",
+      "mobile navigation"
+    ],
+    "description": "Actions in sample mode must request authentication and not mutate sample data.",
+    "steps": [
+      "Open the app without signing in on mobile",
+      "Open the Enquiries tab and select Add enquiry",
+      "Observe the message and return to Overview"
+    ],
+    "expected": "A read-only sample mode message appears and the original sample enquiries are unchanged."
+  },
+  {
+    "name": "Manage a private business profile and enquiry",
+    "viewport": "desktop",
+    "covers": [
+      "sign-in",
+      "GET /api/overview",
+      "POST /api/profile",
+      "POST /api/enquiries",
+      "PUT /api/enquiries/:id",
+      "persistence after refresh"
+    ],
+    "description": "Authenticated workspace saves a real business profile and enquiry status.",
+    "steps": [
+      "Sign in to the app",
+      "From Overview select Set up your business and save a business name, industry and city",
+      "Open Enquiries and add a named test enquiry with a service",
+      "Change its status to Booked and refresh the page"
+    ],
+    "expected": "The saved business profile and enquiry with Booked status remain visible after refreshing."
+  },
+  {
+    "name": "Request content and upload a clinic photo",
+    "viewport": "desktop",
+    "covers": [
+      "POST /api/requests",
+      "POST /api/assets",
+      "private storage",
+      "saved request and image after reload"
+    ],
+    "description": "Signed-in client can submit a growth task and securely store a supported image.",
+    "steps": [
+      "Sign in",
+      "Open Content studio and request a social content task with a title",
+      "Open Media library and upload a JPG or PNG under 3MB",
+      "Refresh and revisit both areas"
+    ],
+    "expected": "The request remains in the list with Requested status and the uploaded image remains visible in the library."
+  },
+  {
+    "name": "Reject invalid enquiry and large image",
+    "viewport": "mobile",
+    "covers": [
+      "form validation",
+      "upload file type and size guard",
+      "private data protection"
+    ],
+    "description": "Empty required fields and unsupported images must be rejected.",
+    "steps": [
+      "Sign in on mobile",
+      "Open Add enquiry and try to save without a name or service",
+      "In Media library choose a non-image file or image larger than 3 MB"
+    ],
+    "expected": "Enquiry form blocks empty required fields; media uploader reports acceptable image formats and size limits."
+  }
+]

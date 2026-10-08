@@ -1,0 +1,14 @@
+{
+  "methods": ["google", "apple", "x", "email"],
+  "headline": "Welcome to Codeedge Growth Starter",
+  "subtitle": "A simple home for your business growth.",
+  "style": {
+    "mode": "light",
+    "accentColor": "#356add",
+    "backgroundColor": "#edf3fc",
+    "panelColor": "#ffffff",
+    "textColor": "#172846",
+    "fontFamily": "Manrope, system-ui, sans-serif",
+    "borderRadius": 12
+  }
+}

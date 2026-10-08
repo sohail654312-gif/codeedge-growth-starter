@@ -36,3 +36,9 @@ test('work progress makes client approvals explicitly unavailable pending atomic
  assert.match(ui,/disabled title='Approval requires independently verified atomic persistence'/);
  assert.match(ui,/separate tracked request/);
 });
+test('media consent is required in client UI and unsigned media uses locked placeholder',()=>{
+ const app=readFileSync('src/App.tsx','utf8');
+ assert.match(app,/mediaConfirmed/);
+ assert.match(app,/no patient or medical data/);
+ assert.match(app,/Awaiting consent and security review/);
+});

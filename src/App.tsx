@@ -220,6 +220,7 @@ function App() {
   });
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [mediaConfirmed, setMediaConfirmed] = useState(false);
 
   const flash = (message: string) => {
     setNotice(message);
@@ -378,6 +379,7 @@ function App() {
   }
   async function uploadImage(file?: File) {
     if (!file) return;
+    if(!mediaConfirmed) { flash('Confirm that you own the media rights and it contains no patient information.'); return; }
     if (demo) {
       flash('Sign in to upload images.');
       return;
@@ -405,7 +407,8 @@ function App() {
         content,
       });
       await refresh();
-      flash('Image uploaded to your private media library.');
+      flash('Image saved privately. Preview access stays locked until consent and safety review.');
+      setMediaConfirmed(false);
     } catch {
       flash('Upload failed. Please try a smaller image.');
     } finally {
@@ -868,13 +871,18 @@ function App() {
                   Upload PNG, JPG or WebP images up to 3 MB each. Video uploads
                   are planned for a later phase.
                 </p>
+                <label className="media-consent-check">
+                  <input type="checkbox" checked={mediaConfirmed}
+                    onChange={e => setMediaConfirmed(e.target.checked)} />
+                  <span>I confirm I have permission to share these business images and they contain no patient or medical data.</span>
+                </label>
                 <label className="primary-button upload-control">
                   <CloudUpload size={17} />
                   {uploading ? 'Uploading...' : 'Choose a photo'}
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
-                    disabled={uploading}
+                    disabled={uploading || !mediaConfirmed}
                     onChange={e => {
                       void uploadImage(e.target.files?.[0]);
                       e.target.value = '';
@@ -889,7 +897,12 @@ function App() {
                 <div className="assets-grid">
                   {data.assets.map(a => (
                     <div className="asset-tile" key={a.id}>
-                      <img src={a.url} alt={a.filename} />
+                      {a.url ? <img src={a.url} alt={a.filename} loading="lazy" /> : (
+                        <div className="locked-media" role="status">
+                          <LockKeyhole size={20} />
+                          <span>Awaiting consent and security review</span>
+                        </div>
+                      )}
                       <strong title={a.filename}>{a.filename}</strong>
                       <small>{datestr(a.createdAt)}</small>
                     </div>

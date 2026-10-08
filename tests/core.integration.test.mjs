@@ -265,3 +265,12 @@ test('trusted server-injected membership verifies exact tenant and limits client
   const blocked=await forged.call('GET','/api/overview',{user:bob,query:{workspaceId:workspaceA}});
   assert.equal(blocked.status,403);
 });
+test('shared client cannot upload to an owner collection without atomic media lifecycle',async()=>{
+  const grant={userId:bob,ownerUserId:alice,workspaceId:workspaceA,role:'client',state:'active'};
+  const trustedMembership={capabilities:{authoritativeRead:true},
+    authorize:async()=>grant,list:async()=>[grant]};
+  const x=fixture({trustedMembership});
+  const upload=await x.call('POST','/api/assets',{user:bob,query:{workspaceId:workspaceA},body:{filename:'demo.jpg',mime:'image/jpeg',content:jpeg}});
+  assert.equal(upload.status,503);
+  assert.equal(x.written.length,0);
+});

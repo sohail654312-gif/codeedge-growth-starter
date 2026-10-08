@@ -166,6 +166,8 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
     'POST /api/assets': [
       protect,
       async ctx => safe(ctx,'asset:upload',async workspace=>{
+        // Shared-media quotas and consent need a transactional service.
+        if(workspace.role!=='owner') return error('Shared media uploads are not yet enabled.',503);
         const file=validateImageUpload(ctx.body);
         const key=tableFor('assets',workspace.ownerUserId);
         // Soft quota guard, not an atomic cross-request rate limit.

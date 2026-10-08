@@ -1,0 +1,13 @@
+{
+  "name": "codeedge-growth-starter-staging-gateway",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Isolated read-only staging API. Not the client production app.",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check config.mjs"
+  },
+  "dependencies": {"pg": "8.13.3"},
+  "engines": {"node": ">=22"}
+}

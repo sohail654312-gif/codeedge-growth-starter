@@ -31,3 +31,6 @@ Status: controlled preview; **NOT approved for production patient or confidentia
 
 ## Continuation updates
 The engineering branch now DENIES foreign workspace access from legacy grant rows, disables non-atomic approval and deletion, and refuses to sign unapproved or foreign-owned media. Transactional membership and approval adapters are mock-tested but **not bound to AppDeploy**. See [Phase 2 continuation evidence](PHASE2-CONTINUATION-EVIDENCE.md). Production remains blocked.
+
+## Phase 2.1 evidence
+See [Phase 2.1 review handoff](PHASE2-1-REVIEW-HANDOFF.md). Real disposable PostgreSQL/cryptographically signed synthetic HTTP tests now exist. **Hosted AppDeploy cross-client security remains BLOCKED**: no external verified IdP binding, PostgreSQL runtime connection, production RLS/privilege proof, media scanner, production retention or real hosted two-user tests. Never auto-enable permissions due to CI results.

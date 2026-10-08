@@ -21,3 +21,6 @@ Phase 1 stores profile/enquiry/request/asset records in `gs_<kind>_<signed-in-ap
 
 ## Rollback
 No data move = revert branch/deployment without schema restoration. Do not merge while unsupported SDK behavior is unresolved.
+
+## Phase 2.1 rollback assurance
+New PostgreSQL tables are provisioned **only in disposable GitHub Actions**, not in any connected Codeedge Supabase project. The running Phase 1 AppDeploy owner tables were never migrated or edited. Database transaction rollback of request state/audit was tested with real PostgreSQL; no production deployment rollback rehearsal was performed. See [review handoff](PHASE2-1-REVIEW-HANDOFF.md).

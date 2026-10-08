@@ -4,6 +4,12 @@ import {DomainError,ownerWorkspaceId} from './core.mjs';
 export function createMediaGate({store,authorizer}) {
   if(!store||!authorizer?.authorize)throw new DomainError('Trusted media gate unavailable.',503);
   return Object.freeze({
+    async requestDeletion({actorUserId,workspaceId,id}) {
+      if(typeof actorUserId!=='string'||workspaceId!==ownerWorkspaceId(actorUserId))
+        throw new DomainError('Only the workspace owner can request deletion.',403);
+      if(!store.queueMediaDeletion)throw new DomainError('Durable media deletion unavailable.',503);
+      return store.queueMediaDeletion({workspaceId,id,actorUserId});
+    },
     async lookup({actorUserId,workspaceId,id}) {
       if(typeof actorUserId!=='string')throw new DomainError('Unauthorized.',403);
       if(workspaceId!==ownerWorkspaceId(actorUserId)) {

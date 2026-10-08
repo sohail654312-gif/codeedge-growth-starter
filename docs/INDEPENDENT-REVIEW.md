@@ -35,3 +35,6 @@ Implement a transactional, server-authoritative invitation/member adapter in dis
 - [ ] Inspect private media consent lifecycle, locked media rendering, tenant quotas and deletion outbox. Real patient/clinical images are forbidden for test.
 - [ ] Verify exact branch AppDeploy sandbox smoke evidence separately from the production preview; sandbox ready does not imply all backend endpoints were exercised.
 - [ ] Confirm no changes outside Growth Starter, no automated workers enabled and no PR merge/deploy.
+
+## Phase 2.1 evidence-specific review
+See [Phase 2.1 review handoff](PHASE2-1-REVIEW-HANDOFF.md). Confirm the independently verified 13+ **real Postgres** tests are not described as real AppDeploy 2-user acceptance. Inspect final SQL exact media prefix checks, rights declaration enforced server-side, approval gates, and owner-only deletion. Confirm no binding of adapters to hosted AppDeploy until user/IdP/secrets/RLS gates pass.

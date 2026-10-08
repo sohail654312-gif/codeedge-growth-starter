@@ -114,7 +114,8 @@ test('foreign and unapproved media fail in real DB; deletion has durable tombsto
   await assert.rejects(media.lookup({actorUserId:ownerB.userId,workspaceId:wsA,id:'syntheticImage1'}),e=>e.status===403);
   await assert.rejects(media.lookup({actorUserId:ownerA.userId,workspaceId:wsA,id:'notapproved'}),e=>e.status===404);
   assert.equal((await media.lookup({actorUserId:ownerA.userId,workspaceId:wsA,id:'syntheticImage1'})).key,storage);
-  const queued=await store.queueMediaDeletion({workspaceId:wsA,id:'syntheticImage1',actorUserId:ownerA.userId});
+  await assert.rejects(media.requestDeletion({actorUserId:ownerB.userId,workspaceId:wsA,id:'syntheticImage1'}),e=>e.status===403);
+  const queued=await media.requestDeletion({workspaceId:wsA,id:'syntheticImage1',actorUserId:ownerA.userId});
   assert.equal(queued.queued,true);
   assert.equal((await pool.query(`SELECT count(*)::int AS n FROM growth_starter.media_delete_outbox WHERE workspace_id=$1 AND media_id='syntheticImage1'`,[wsA])).rows[0].n,1);
   await assert.rejects(media.lookup({actorUserId:ownerA.userId,workspaceId:wsA,id:'syntheticImage1'}),e=>e.status===404);

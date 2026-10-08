@@ -61,3 +61,6 @@ No self-certified phase closure: exact-SHA, independent acceptance evidence requ
 
 ## Continuation acceptance
 See [Phase 2 continuation evidence](PHASE2-CONTINUATION-EVIDENCE.md) for R1–R7 status, staging limitations, runtime API evidence and next gates. Real-clinic pilot remains blocked.
+
+## Phase 2.1 continuation
+See [Phase 2.1 review handoff](PHASE2-1-REVIEW-HANDOFF.md) for exact test separation and R1–R7. Client Website and role-gated Agency desk are built, while invitations, verified approval, signing/publishing, multi-user staging acceptance and real-media release remain blocked.

@@ -26,3 +26,6 @@ Per-workspace media must have server-enforced owner partition; consent is requir
 Official SDK reference lists only `db.add`, `db.get`, `db.list`, `db.update`, `db.delete` for persisted table operations, with per-app quotas. It does not document ACID transactions, unique row constraints or compare-and-swap. `AuthUser` has `userId` and optional `email`, but no `emailVerified` attestation. The server's own `requireAuth` must remain in use.
 
 **Therefore no AppDeploy-native transactional membership adapter is implemented and invitations cannot be enabled.** The domain adapter and in-memory ACID simulation are architectural tests, not an assertion that the provider offers those guarantees.
+
+## Disposable PostgreSQL adapter now implemented (still unbound)
+Original adapter contract now has a concrete `backend/postgres-store.mjs` + `db/migrations/0001_growth_starter.sql` and a GitHub Actions PostgreSQL 16 disposable test job. It tests serialized one-time claims, 403/401 auth denial in a synthetic signed HTTP harness, unique membership, transaction rollback, conflict checks, media outbox. The production AppDeploy DB is unchanged; no hosted IdP or PG secrets configured. The standalone domain services remain disabled from public routes until independent staging and privilege review.

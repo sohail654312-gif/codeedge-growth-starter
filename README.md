@@ -41,3 +41,6 @@ See [implementation gates](docs/IMPLEMENTATION.md) and [security boundaries](doc
 Other Codeedge repositories are read-only reference; changes here must not modify Business OS, CIGO or MVP.
 
 Do not commit API credentials, real clinic/patient content, production datasets or uploaded photos. Consider changing this repository from public to private in GitHub Settings.
+
+## Phase 2.1 implementation (PR #2, draft)
+[Reviewable transactional/UX evidence](docs/PHASE2-1-REVIEW-HANDOFF.md): disposable PostgreSQL 16 tests, synthetic signed-session HTTP isolation, Website and guarded Agency desk pages, image decoding and deletion outbox. No live cross-workspace invitations or production provider binding.

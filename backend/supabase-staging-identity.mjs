@@ -75,7 +75,7 @@ export function createSupabaseStagingIdentity({
          Date.parse(user.banned_until)>now())deny('Verified email required.',403);
       const email=user.email.trim().toLowerCase();
       if(!email || email.length>254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ||
-         claims.email?.trim()?.toLowerCase()!==email)deny('Verified email required.',403);
+         typeof claims.email!=='string' || claims.email.trim().toLowerCase()!==email)deny('Verified email required.',403);
       const actor=Object.freeze({userId:user.id,email,emailVerified:true,
         sessionId:claims.session_id,issuer,authProvider:'supabase'});
       let active;

@@ -42,3 +42,19 @@ Baseline: 2026-10-08
 Single-writer, manual execution. No background AI agents without explicit instruction.
 No changes to existing MVP, Business OS or CIGO repositories.
 No self-certified phase closure: exact-SHA, independent acceptance evidence required.
+
+## Incremental Phase 2 proof (engineering branch; do not merge without independent review)
+- [x] Domain rules for owner, agency_admin, staff, client and permission checks
+- [x] Server-verified owner workspace selector and deny-by-default grants
+- [x] Existing Phase 1 `gs_<type>_<authUserId>` records reused without copying (see MIGRATION.md)
+- [x] Client-proof request approval state machine; no direct public posting
+- [x] Strict profile/enquiry/request inputs and paginated list endpoints
+- [x] Image base64 format/signature checks, storage owner prefix, quota guard and protected delete
+- [x] 19 mock-adapter integration/source tests on GitHub CI (NOT hosted AppDeploy tests)
+- [ ] Verify actual TypeScript/AppDeploy bundler imports and SDK type contract
+- [ ] Implement transactional invitation acceptance and revocation; currently no minting API
+- [ ] Build client/agency role-specific screens and preserve simple client navigation
+- [ ] Demonstrate cross-tenant denial against deployed staging with independent reviewer accounts
+- [ ] Run full live-browser CRUD/accessibility and robust upload/retention QA
+
+**Deployment boundary:** `main` and the applied AppDeploy preview remain unchanged by this PR. No production deployment, merge or independent acceptance is claimed.

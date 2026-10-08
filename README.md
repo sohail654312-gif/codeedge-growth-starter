@@ -6,6 +6,18 @@ Standalone, mobile-first Codeedge growth portal for clinics and small local busi
 
 **Live app:** https://codeedge-growth-starter-5jhvfk.v2.appdeploy.ai/
 
+## Phase 2 engineering update (draft PR only)
+
+An isolated, review-only core has been added on the Phase 2 engineering branch:
+- AppDeploy route adapter delegates to dependency-injected domain handlers; all private routes use SDK `requireAuth()`.
+- Owner workspace ID is derived from authenticated server user ID; existing owner-keyed tables are preserved for legacy records.
+- Role matrix covers owner, agency admin, staff and client; unknown/fabricated workspace selections fail closed.
+- Server-side validation, paginated enquiry/request reads, MIME plus first-byte media signature checks.
+- Bounded media quota, owner/admin media deletion and request review/client decision transition rules.
+- 19 CI checks passed against *mocked* SDK adapters at the implementation SHA (not hosted runtime acceptance).
+
+**Blocked:** No client invites or membership creation, verified email binding, real agency UI, true DB transactions, production file scanning, video upload, privacy approval, fully reproducible AppDeploy build, or independently verified cross-tenant hosted behavior. Do not enable real-client use from these source tests.
+
 ## Implemented in Phase 1
 - Read-only sample clinic workspace with clearly illustrative data
 - AppDeploy sign-in, owner-scoped business profile, enquiries and status

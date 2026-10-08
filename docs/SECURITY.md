@@ -46,3 +46,9 @@ Owner-approved `db/migrations/0003_staging_default_deny_rls.sql` has been applie
 
 ## Phase 2.3 isolated hosted state
 Owner-approved Supabase staging now has migrations 0001–0005, RLS 7/7 default deny with no policies, restricted runtime role NOLOGIN and boolean session probe granted to the reader only. A rollback-only hosted tenant-filter test succeeds with NO persisted records. The Node API and provider identity adapter are **unmerged source only**, not live. A default-deny RLS schema does not alone prove owner/clinic separation because existing SECURITY DEFINER routines still trust the server-provided actor identity. Private CA/DB credentials and independently authenticated hosted negative acceptance are required before pilot. See [Phase 2.3 handoff](PHASE2-3-HANDOFF.md).
+
+## Phase 2.4 — hosted identity/SECURITY DEFINER threat review
+- Existing Supabase-hosted `growth_starter` functions are owned by the `postgres` management role (BYPASSRLS), and their SQL arguments are **not independently bound to an authenticated actor at the database layer**. A compromised runtime that may invoke them could supply another actor ID. This remains a **HIGH residual authorization threat**, not cured by RLS metadata or mocked auth.
+- Both restricted roles remain NOLOGIN. No dedicated TLS/CA-verified hosted PostgreSQL client with secret-managed credentials has been established, and no real test users/sessions exist. Do not enable agency mutation or patient media.
+- The manual `staging/hosted-acceptance.mjs` runner prevents synthetic-only verification being mistaken for a real hosted HTTP pass; there is no runnable hosted gateway yet.
+- Staging dependencies have a committed lockfile, cloud CI `npm ci`, an audit gate and mock gateway-config safety tests. See [Phase 2.4 handoff](PHASE2-4-HANDOFF.md).

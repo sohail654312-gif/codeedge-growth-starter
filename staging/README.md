@@ -19,9 +19,9 @@ The entrypoint `staging/server.mjs` launches the existing read-only gateway, but
 Optional: `STAGING_BIND_HOST` (default loopback), `STAGING_TLS_TERMINATED=true` for external TLS reverse proxy, `PORT` (default 8787).
 
 ## Deployment process
-- Clone PR #2 in an isolated staging environment; install `staging/package.json` with Node >=22, including the backend source folder.
+- Clone the exact PR #2 commit into an isolated, HTTPS-only staging environment with Node.js 22 and the repository backend folder intact.
 - Configure environment using backend-only secret storage; never paste connection strings or passwords into GitHub comments, CI logs or a browser frontend.
-- Start from repository root with `cd staging && npm install --ignore-scripts && npm start`. Prior to production-quality release, pin a vetted lockfile and run software supply-chain audit.
+- The committed `staging/package-lock.json` pins `pg@8.13.3` and its dependency integrity hashes. Install from repository root with `cd staging && npm ci --ignore-scripts --no-fund && npm audit --omit=dev --audit-level=high`. Start **only after** the restricted runtime credential, trusted provider and CA are configured: `npm start`. Never regenerate dependency versions as a deployment fallback.
 - No service should start without dedicated database LOGIN, trusted Auth configuration and TLS CA.
 - `GET /healthz` indicates only readiness; it is **not** proof of tenant access, revocation, or data correctness.
 - `GET /v1/workspaces` and `GET /v1/requests?workspaceId=...` require verified bearer identity and active membership.
@@ -29,3 +29,9 @@ Optional: `STAGING_BIND_HOST` (default loopback), `STAGING_TLS_TERMINATED=true` 
 
 ## Blockers
 The hosted `growth_starter_runtime` principal is still **NOLOGIN** with no credentials; real staging HTTPS ingress, database certificate, standalone service secret storage, Supabase Auth asymmetric signing configuration and actual user sessions must be set up and tested before live collaboration. Do not deploy a fake service with synthetic credentials.
+
+## Manual hosted acceptance (never run with real credentials in public CI)
+- `node staging/hosted-acceptance.mjs` requires the following **secret-managed environment names**: `GS_ACCEPT_GATEWAY_URL`, `GS_ACCEPT_TOKEN_A`, `GS_ACCEPT_TOKEN_B`, `GS_ACCEPT_WORKSPACE_A`, `GS_ACCEPT_WORKSPACE_B`, `GS_ACCEPT_REQUEST_A`, `GS_ACCEPT_REQUEST_B`, `GS_ACCEPT_ALLOWED_ORIGIN`. Supply two independently authenticated, confirmed staging test accounts and two synthetic workspaces with identifiable fictional requests using an authorized ephemeral test fixture. Never use patient data.
+- The runner validates HTTPS, separate token subjects and session IDs, both foreign tenant denials, forged claims/signatures, wrong origin, read-only methods and unavailable media routes. It prints only check names/status/latency; no access tokens or response bodies.
+- It **does not** independently establish password/TLS quality, actual JWT key-rotation support, expired/revoked session behavior, database privileges, or cleanup. These require separate security-controller evidence. A mock unit-test pass does not constitute hosted acceptance.
+- On first failing status or unexpected cross-workspace data, stop; keep agency writes/media disabled and document the sanitized outcome.

@@ -76,3 +76,6 @@ Separate project `codeedge-growth-starter-staging` (`dbppeymhsemvghbvuvof`) crea
 
 ## Phase 2.3 hosted foundation (unmerged)
 See [Phase 2.3 handoff](PHASE2-3-HANDOFF.md). Restricted NOLOGIN runtime role and narrow auth session probe are installed in a separate empty Supabase staging project; a TLS-required Node staging runner and explicit Supabase Auth adapter have been implemented with synthetic security tests. Hosted real identity, actual restricted database LOGIN and real two-user HTTP acceptance remain BLOCKED. This does not replace the existing Codeedge navy/white client portal or enable the agency desk.
+
+## Phase 2.4 manual hosted-test and supply-chain increment
+Implemented a token-redacting two-user acceptance runner and seeded-fixture requirements, added its negative mock regressions, pinned the standalone Node staging dependencies into `staging/package-lock.json`, and added the Node 22 npm-ci/audit workflow. **Neither standalone gateway nor actual two-user sessions are hosted yet.** No live agency writes or production app changes. See [Phase 2.4 handoff](PHASE2-4-HANDOFF.md).

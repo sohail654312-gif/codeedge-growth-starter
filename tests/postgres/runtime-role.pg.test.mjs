@@ -20,12 +20,11 @@ test('runtime role can SET reader, cannot inherit reader or log in',async()=>{
   for(const value of Object.values(r))assert.equal(value,false);
   const grants=await pool.query(`SELECT
    pg_has_role('growth_starter_runtime','growth_starter_reader','SET') AS can_set,
-   pg_has_role('growth_starter_runtime','growth_starter_reader','USAGE') AS can_inherit,
-   pg_has_role('postgres','growth_starter_reader','SET') AS privileged_can_set`);
+   pg_has_role('growth_starter_runtime','growth_starter_reader','USAGE') AS can_inherit`);
   assert.equal(grants.rows[0].can_set,true);
   assert.equal(grants.rows[0].can_inherit,false);
-  // GitHub's postgres is a superuser, unlike Supabase's restricted postgres.
-  // Never assert privileged_can_set = false against this disposable test DB.
+  // The disposable CI database is owned by gs_test, not postgres.
+  // Management-role membership is checked separately in the hosted project.
 });
 test('NOLOGIN preparation does not grant runtime any direct base-table privileges',async()=>{
   const r=await pool.query(`SELECT

@@ -1,0 +1,41 @@
+name: Growth Starter staging supply-chain
+on:
+  push:
+    branches: [engineering/phase2-core-security]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  staging-supply-chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Resolve pinned staging dependencies to a candidate lockfile
+        working-directory: staging
+        run: npm install --package-lock-only --ignore-scripts --no-fund --no-audit
+      - name: Publish candidate lockfile for review (no secrets)
+        working-directory: staging
+        run: |
+          echo "GS_LOCKFILE_BEGIN"
+          base64 -w0 package-lock.json
+          echo
+          echo "GS_LOCKFILE_END"
+      - name: Reproducible staging dependency installation
+        working-directory: staging
+        run: npm ci --ignore-scripts --no-fund
+      - name: Audit runtime dependencies
+        working-directory: staging
+        run: npm audit --omit=dev --audit-level=high
+      - name: Staging syntax and TLS configuration regressions
+        run: |
+          node --check staging/server.mjs
+          node --check staging/config.mjs
+          node --check staging/hosted-acceptance.mjs
+          node --check backend/supabase-staging-identity.mjs
+          node --check backend/staging-supabase-gateway.mjs
+          node --test tests/staging-config.test.mjs tests/supabase-staging-identity.test.mjs tests/hosted-acceptance.test.mjs

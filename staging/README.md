@@ -35,3 +35,16 @@ The hosted `growth_starter_runtime` principal is still **NOLOGIN** with no crede
 - The runner validates HTTPS, separate token subjects and session IDs, both foreign tenant denials, forged claims/signatures, wrong origin, read-only methods and unavailable media routes. It prints only check names/status/latency; no access tokens or response bodies.
 - It **does not** independently establish password/TLS quality, actual JWT key-rotation support, expired/revoked session behavior, database privileges, or cleanup. These require separate security-controller evidence. A mock unit-test pass does not constitute hosted acceptance.
 - On first failing status or unexpected cross-workspace data, stop; keep agency writes/media disabled and document the sanitized outcome.
+
+## Phase 2.5 review: CORS and privilege-drift hardening
+- Browsers send unauthenticated `OPTIONS` preflights before cross-origin bearer-token GETs. The gateway now allows only exact-origin, `GET` + `Authorization` preflights on the two read endpoints. No preflight authenticates a user, accesses SQL or grants writes.
+- Startup also checks the **reader role itself**, not just the network LOGIN. Unexpected direct table privileges, CREATE rights, LOGIN/SUPERUSER/BYPASSRLS and extra executable functions fail preflight before any server listener is opened.
+- No new migrations were applied; no role password was set and the existing `growth_starter_runtime` is still NOLOGIN.
+- The existing host acceptance runner remains manual-only. Do not call the historical AppDeploy QA sandbox a live Growth Starter staging gateway.
+
+## Exact owner/operator gates before real activation
+1. Select a specifically approved Node 22 HTTPS service and verify whether its cost is zero. It must keep backend secrets out of build artifacts, browser code and logs; require certificate-validated TLS for Supabase connections.
+2. Use that service's protected **one-time credential-entry channel** to establish a unique restricted PostgreSQL runtime password and rotate it; only then authorize changing `growth_starter_runtime` to LOGIN. Never use the administrative `postgres` or `service_role` credential. Validate privileges and separate Login/Reader grants from the host before enabling traffic.
+3. Inspect actual Supabase Auth signing keys (ES256/RS256), verified-email requirements, redirect allowlist and token lifetime. Create two **independent synthetic email-confirmed test users** via approved user-management configuration; never fake hosted user sessions.
+4. Seed two fictional workspaces and requests in isolated staging using an approved auditable script and a cleanup transaction. Run the existing HTTPS two-user runner and **independent** real session-revocation/expiry, forbidden database operations and cleanup checks; record status codes, deployed exact SHA and TLS evidence without passwords/tokens.
+5. Revisit the HIGH `SECURITY DEFINER` actor-parameter impersonation risk before enabling client invites, agency write routes, photos or any real clients. Keep current read-only gateway fail-closed if that risk cannot be independently resolved.

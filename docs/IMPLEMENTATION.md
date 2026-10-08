@@ -73,3 +73,6 @@ The unmerged engineering branch includes a real NOINHERIT PostgreSQL login test 
 
 ## Hosted isolated Supabase staging and RLS gate
 Separate project `codeedge-growth-starter-staging` (`dbppeymhsemvghbvuvof`) created with owner approval; migrations 0001–0003 applied only there. Default-deny RLS is active on all seven empty tables with **no policies**. The restricted read role remains NOLOGIN. Runtime account, IdP sessions and two-user hosted access are not configured. See [provisioning evidence](STAGING-PROVISIONING-EVIDENCE.md) and [RLS acceptance](STAGING-RLS-ACCEPTANCE.md). PR stays draft, production unchanged.
+
+## Phase 2.3 hosted foundation (unmerged)
+See [Phase 2.3 handoff](PHASE2-3-HANDOFF.md). Restricted NOLOGIN runtime role and narrow auth session probe are installed in a separate empty Supabase staging project; a TLS-required Node staging runner and explicit Supabase Auth adapter have been implemented with synthetic security tests. Hosted real identity, actual restricted database LOGIN and real two-user HTTP acceptance remain BLOCKED. This does not replace the existing Codeedge navy/white client portal or enable the agency desk.

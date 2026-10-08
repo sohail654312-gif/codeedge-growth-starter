@@ -24,3 +24,6 @@ No data move = revert branch/deployment without schema restoration. Do not merge
 
 ## Phase 2.1 rollback assurance
 New PostgreSQL tables are provisioned **only in disposable GitHub Actions**, not in any connected Codeedge Supabase project. The running Phase 1 AppDeploy owner tables were never migrated or edited. Database transaction rollback of request state/audit was tested with real PostgreSQL; no production deployment rollback rehearsal was performed. See [review handoff](PHASE2-1-REVIEW-HANDOFF.md).
+
+## Phase 2.3 isolated staging update
+The isolated Supabase Growth Starter staging database has applied migrations 0001–0005 and remains free of actual/fictional client records. A new `growth_starter_runtime` role is deliberately NOLOGIN pending protected secrets and a verified restricted LOGIN. Existing AppDeploy legacy owner tables are still untouched; **no migration or copying** of Phase 1 data has occurred. See [Phase 2.3 handoff](PHASE2-3-HANDOFF.md).

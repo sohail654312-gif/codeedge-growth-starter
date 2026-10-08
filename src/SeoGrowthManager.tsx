@@ -145,7 +145,7 @@ export default function SeoGrowthManager({demo}:{demo:boolean}){
         <article className="sgm-result-card"><h4>Proposed Codeedge work</h4>
           {report.tasks.slice(0,7).map(t=><div className="sgm-task" key={t.id}>
             <strong>{t.recommendation}</strong>
-            <small>{t.priority} priority · {t.status.replaceAll('_',' ')} · {t.url}</small>
+            <small>{t.priority} priority · {t.status.replace(/_/g,' ')} · {t.url}</small>
           </div>)}
           {report.tasks.length>7&&<small>See the full report for {report.tasks.length} reviewable tasks.</small>}
           <button type="button" disabled title="Agency task creation requires verified hosted identity and transactional authorisation">

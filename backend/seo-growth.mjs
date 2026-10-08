@@ -136,6 +136,31 @@ function analyzePages(pages){
  }
  return tasks.slice(0,80);
 }
+function offlineSiteDirectives(robotsTxt,sitemapXml,origin){
+ assert(typeof robotsTxt==='string' && robotsTxt.length<=20000,'robots.txt fixture must be bounded.');
+ assert(typeof sitemapXml==='string' && sitemapXml.length<=60000,'Sitemap XML fixture must be bounded.');
+ const references=[];
+ for(const line of robotsTxt.split(/\r?\n/)){
+  const match=line.replace(/#.*/, '').trim().match(/^Sitemap\s*:\s*(\S+)/i);
+  if(match && references.length<20){
+    try{const u=new URL(match[1]);references.push({url:u.href,inScope:u.protocol==='https:'&&u.origin===origin});}
+    catch{references.push({url:'invalid_reference',inScope:false});}
+  }
+ }
+ const sitemapPaths=[];
+ for(const match of sitemapXml.matchAll(/<loc\b[^>]*>([\s\S]*?)<\/loc\s*>/gi)){
+  if(sitemapPaths.length>=40)break;
+  try{const u=new URL(match[1].trim());if(u.origin===origin&&u.protocol==='https:')sitemapPaths.push(u.pathname);}
+  catch{/* Invalid supplied sitemap links are not treated as valid crawl evidence. */}
+ }
+ return {
+  status:robotsTxt||sitemapXml?'operator_supplied_offline_text':'not_supplied',
+  robotsTxtPresent:Boolean(robotsTxt),sitemapXmlPresent:Boolean(sitemapXml),
+  sitemapReferences:references,sitemapPaths:[...new Set(sitemapPaths)],
+  allPagesBlockedByRobots:/^User-agent:\s*\*\s*\n\s*Disallow:\s*\/\s*(?:\n|$)/im.test(robotsTxt),
+  evidence:'Provided text only: no robots/sitemap HTTP fetch or robots compliance claim.'
+ };
+}
 const keywordMetrics=()=>({searchVolume:null,keywordDifficulty:null,cpc:null,ranking:null,traffic:null,
  metricsStatus:'not_connected'});
 function planKeywords(business,pages,date){
@@ -153,6 +178,9 @@ function planKeywords(business,pages,date){
    provenance:{source:'service_location_combinations',kind:'hypothesis',observedAt:date},
    freshness:'Generated '+date+'; not evidence of search demand',
    rationale:'Relevant to the declared service and target geography.',
+   suggestedTitle:service+' in '+area+' | '+business.name,
+   suggestedHeading:service+' in '+area,
+   internalLinkTarget:match?.url||new URL('/services',business.website).href,
    status:'suggested_for_human_review',reviewHistory:[],metrics:keywordMetrics()
   });
  }
@@ -190,7 +218,7 @@ function validateBusiness(b){
   languages:strings(b.languages,'Languages',3,35)
  });
 }
-export function runOfflineGrowthReport({business:input,pages:fixtures,workspaceId,instruction,asOf='2026-10-08T00:00:00.000Z'}){
+export function runOfflineGrowthReport({business:input,pages:fixtures,workspaceId,instruction,robotsTxt='',sitemapXml='',asOf='2026-10-08T00:00:00.000Z'}){
  assert(safeWorkspace(workspaceId),'Authorized workspace scope required.');
  const business=validateBusiness(input);
  assert(workspaceId===business.workspaceId,'Cross-workspace research denied.');
@@ -202,7 +230,11 @@ export function runOfflineGrowthReport({business:input,pages:fixtures,workspaceI
   return pageEvidence(p,business.website);
  });
  assert(new Set(pages.map(p=>p.url)).size===pages.length,'Duplicate page fixture.');
+ const directives=offlineSiteDirectives(robotsTxt,sitemapXml,business.website);
  const tasks=analyzePages(pages);
+ if(directives.allPagesBlockedByRobots)tasks.push(task('SEO-ROBOTS','robots_disallow_all',pages[0],
+   'Supplied robots.txt fixture disallows every path for wildcard crawlers',
+   'Verify actual robots policy and intended indexing before adjusting it.','high'));
  const keywords=planKeywords(business,pages,asOf);
  const aeo=aeoSuggestions(business,pages);
  const localTask=keywords.filter(k=>k.mapping==='proposed_page_only').slice(0,4).map((k,i)=>({
@@ -216,7 +248,7 @@ export function runOfflineGrowthReport({business:input,pages:fixtures,workspaceI
  return Object.freeze({
   version:'growth-starter.seo-report.v1',workspaceId,business,instruction:command,
   generatedAt:asOf,mode:'offline_supplied_html_only',
-  siteAudit:{pages,findings:tasks},keywords,aeo,
+  siteAudit:{pages,findings:tasks,directives},keywords,aeo,
   tasks:[...tasks,...localTask],cannibalisationWarnings:keywords
    .filter(k=>k.mapping==='existing_fixture_page')
    .reduce((acc,k)=>{const similar=keywords.filter(other=>other!==k&&other.targetPage===k.targetPage&&other.cluster!==k.cluster);if(similar.length&&!acc.includes(k.targetPage))acc.push(k.targetPage);return acc;},[]),

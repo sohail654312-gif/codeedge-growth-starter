@@ -56,3 +56,15 @@ test('duplicate inputs rejected and live publication/integration remain strictly
  assert.equal(INTEGRATION_CONTRACT.enabled,false);
  assert.equal(INTEGRATION_CONTRACT.direction,'Growth Starter to Business OS read only');
 });
+
+test('offline robots and sitemap evidence is parsed without any network access',()=>{
+ const f=FICTIONAL_SEO_FIXTURES.plumbing;
+ const r=runOfflineGrowthReport({workspaceId:f.business.workspaceId,business:f.business,pages:f.pages,
+ instruction:'SEO research',robotsTxt:'User-agent: *\nDisallow: /\nSitemap: https://atlas-plumbing.example/sitemap.xml',
+ sitemapXml:'<urlset><url><loc>https://atlas-plumbing.example/boiler-repair</loc></url></urlset>'});
+ assert.equal(r.siteAudit.directives.allPagesBlockedByRobots,true);
+ assert.ok(r.tasks.some(t=>t.code==='robots_disallow_all'));
+ assert.deepEqual(r.siteAudit.directives.sitemapPaths,['/boiler-repair']);
+ assert.ok(r.siteAudit.directives.sitemapReferences.every(x=>x.inScope));
+ assert.ok(r.keywords.every(x=>x.suggestedHeading && x.suggestedTitle && x.internalLinkTarget));
+});

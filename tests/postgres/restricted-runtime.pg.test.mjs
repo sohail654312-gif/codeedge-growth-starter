@@ -44,26 +44,6 @@ before(async()=>{
     issuer:'https://synthetic.invalid',audience:'pilot-staging',
     clock:()=>epoch*1000,checkSession:async actor=>!revoked.has(actor.userId),
   });
-  // Temporary sanitized CI investigation of reader-role permission profile.
-  const profile=(await limited.query(`SELECT
-    current_user AS name,
-    (SELECT rolinherit FROM pg_roles WHERE rolname='growth_starter_reader') AS reader_inherit,
-    (SELECT rolcanlogin FROM pg_roles WHERE rolname='growth_starter_reader') AS reader_login,
-    has_schema_privilege('growth_starter_reader','growth_starter','CREATE') AS reader_create,
-    (SELECT count(*)::integer FROM pg_class c JOIN pg_namespace n ON c.relnamespace=n.oid
-      WHERE n.nspname='growth_starter' AND c.relkind IN ('r','p','v','m','f')
-      AND (has_table_privilege('growth_starter_reader',c.oid,'SELECT')
-        OR has_table_privilege('growth_starter_reader',c.oid,'INSERT')
-        OR has_table_privilege('growth_starter_reader',c.oid,'UPDATE')
-        OR has_table_privilege('growth_starter_reader',c.oid,'DELETE'))) AS reader_table_grants,
-    (SELECT array_agg(p.proname ORDER BY p.proname) FROM pg_proc p JOIN pg_namespace n ON p.pronamespace=n.oid
-      WHERE n.nspname='growth_starter' AND has_function_privilege('growth_starter_reader',p.oid,'EXECUTE')
-      AND NOT (
-       COALESCE(p.oid=to_regprocedure('growth_starter.staging_list_workspaces(text)'),false)
-       OR COALESCE(p.oid=to_regprocedure('growth_starter.staging_list_requests(text,text,integer)'),false)
-       OR COALESCE(p.oid=to_regprocedure('growth_starter.staging_session_active(text,text,text)'),false)
-      )) AS extra_routines`)).rows[0];
-  console.error('SANITIZED_PG_ROLE_DIAG',JSON.stringify(profile));
   restricted=await createRestrictedStagingPool({rawPool:limited});
   gateway=await createRestrictedStagingGateway({rawPool:limited,identityVerifier:verifier,allowedOrigin:'https://staging.synthetic.invalid'});
   server=gateway.createServer();

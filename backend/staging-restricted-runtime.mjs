@@ -63,9 +63,14 @@ export async function createRestrictedStagingPool({ rawPool }) {
           WHERE n.nspname='growth_starter'
           AND has_function_privilege('growth_starter_reader',p.oid,'EXECUTE')
           AND NOT (
-            COALESCE(p.oid=to_regprocedure('growth_starter.staging_list_workspaces(text)'),false)
-            OR COALESCE(p.oid=to_regprocedure('growth_starter.staging_list_requests(text,text,integer)'),false)
-            OR COALESCE(p.oid=to_regprocedure('growth_starter.staging_session_active(text,text,text)'),false)
+            (p.proname='staging_list_workspaces' AND p.pronargs=1 AND
+             p.proargtypes[0]='text'::regtype)
+            OR (p.proname='staging_list_requests' AND p.pronargs=3 AND
+             p.proargtypes[0]='text'::regtype AND p.proargtypes[1]='text'::regtype AND
+             p.proargtypes[2]='integer'::regtype)
+            OR (p.proname='staging_session_active' AND p.pronargs=3 AND
+             p.proargtypes[0]='text'::regtype AND p.proargtypes[1]='text'::regtype AND
+             p.proargtypes[2]='text'::regtype)
           )
         ) AS reader_extra_functions
       FROM pg_roles r CROSS JOIN pg_roles rr

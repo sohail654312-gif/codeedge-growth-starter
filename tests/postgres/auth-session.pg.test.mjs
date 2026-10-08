@@ -74,10 +74,11 @@ test('session deletion (revocation) denies even with still valid JWT',async()=>{
   const check=await pool.query('SELECT growth_starter.staging_session_active($1,$2,$3) AS active',[owner,session,email]);
   assert.equal(check.rows[0].active,false);
 });
-test('auth probe cannot be called by anon / authenticated or PUBLIC',async()=>{
+test('auth probe cannot be called by an arbitrary non-reader role',async()=>{
+  await pool.query('CREATE ROLE gs_auth_untrusted_probe NOLOGIN');
   const r=await pool.query(`SELECT
     has_function_privilege('growth_starter_reader','growth_starter.staging_session_active(text,text,text)','EXECUTE') AS reader,
-    has_function_privilege('PUBLIC','growth_starter.staging_session_active(text,text,text)','EXECUTE') AS public`);
+    has_function_privilege('gs_auth_untrusted_probe','growth_starter.staging_session_active(text,text,text)','EXECUTE') AS untrusted`);
   assert.equal(r.rows[0].reader,true);
-  assert.equal(r.rows[0].public,false);
+  assert.equal(r.rows[0].untrusted,false);
 });

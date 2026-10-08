@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { auth, api } from '@appdeploy/client';
 import ClinicOverview from './ClinicOverview';
 import WorkProgress from './WorkProgress';
+import {WebsitePage,AgencyDesk} from './ServicePages';
 import {
   Activity,
   ArrowRight,
@@ -78,6 +79,8 @@ type Overview = {
 };
 type Tab =
   | 'Overview'
+  | 'Website'
+  | 'Agency desk'
   | 'Enquiries'
   | 'Content studio'
   | 'Google & SEO'
@@ -164,10 +167,12 @@ const sample: Overview = {
 };
 const nav: { name: Tab; icon: typeof Activity }[] = [
   { name: 'Overview', icon: LayoutDashboard },
+  { name: 'Website', icon: Globe2 },
   { name: 'Enquiries', icon: MessageCircle },
   { name: 'Content studio', icon: WandSparkles },
   { name: 'Google & SEO', icon: Globe2 },
   { name: 'Media library', icon: Camera },
+  { name: 'Agency desk', icon: Users },
   { name: 'Settings', icon: Settings },
 ];
 const datestr = (value: string) =>
@@ -456,6 +461,7 @@ function App() {
       tone: 'orange',
     },
   ];
+  const visibleNav = nav.filter(item => item.name !== 'Agency desk' || (!demo && (data.role === 'agency_admin' || data.role === 'staff')));
   const rows = enquiries.filter(e =>
     [e.name, e.service, e.channel]
       .join(' ')
@@ -478,7 +484,7 @@ function App() {
         </div>
         <div className="nav-heading">WORKSPACE</div>
         <nav>
-          {nav.map(({ name, icon: Icon }) => (
+          {visibleNav.map(({ name, icon: Icon }) => (
             <button
               key={name}
               className={'nav-item ' + (tab === name ? 'selected' : '')}
@@ -572,7 +578,7 @@ function App() {
           </div>
         </div>
         <div className="mobile-tabs">
-          {nav.map(({ name, icon: Icon }) => (
+          {visibleNav.map(({ name, icon: Icon }) => (
             <button
               key={name}
               className={name === tab ? 'active' : ''}
@@ -605,6 +611,19 @@ function App() {
               openRequest={() => guard('request')}
               goTo={setTab}
             />
+          )}
+          {tab === 'Website' && (
+            <WebsitePage
+              business={currentName}
+              website={data.profile?.website || ''}
+              requests={requests}
+              demo={demo}
+              onWebsiteEdit={() => guard('profile')}
+              onRequest={() => {setWork({title:'',kind:'Website update',notes:''});guard('request');}}
+            />
+          )}
+          {tab === 'Agency desk' && !demo && (data.role === 'agency_admin' || data.role === 'staff') && (
+            <AgencyDesk role={data.role} requests={requests} assets={data.assets}/>
           )}
           {tab === 'Enquiries' && (
             <>

@@ -42,3 +42,13 @@ test('media consent is required in client UI and unsigned media uses locked plac
  assert.match(app,/no patient or medical data/);
  assert.match(app,/Awaiting consent and security review/);
 });
+
+test('client website page and agency desk maintain honest privilege boundaries',()=>{
+ const app=readFileSync('src/App.tsx','utf8');
+ const pages=readFileSync('src/ServicePages.tsx','utf8');
+ assert.match(app,/data\.role === 'agency_admin'/);
+ assert.match(app,/visibleNav\.map\(/);
+ assert.match(pages,/only the workspace selected through your verified server membership/i);
+ assert.match(pages,/security gate pending/);
+ assert.match(pages,/rankings are not connected|search rankings are not connected/i);
+});

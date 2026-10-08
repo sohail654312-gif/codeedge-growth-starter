@@ -5,6 +5,7 @@ import { createStagingGateway } from './staging-gateway.mjs';
 // the app or accept a caller-generated SQL fragment.
 const workspacesSQL = 'SELECT workspace_id, role FROM growth_starter.staging_list_workspaces($1)';
 const requestsSQL = 'SELECT id, workspace_id, title, kind, status, version, updated_at FROM growth_starter.staging_list_requests($1,$2,$3)';
+const sessionSQL = 'SELECT growth_starter.staging_session_active($1,$2,$3) AS active';
 
 function fail() {
   throw new DomainError('Restricted staging PostgreSQL runtime required.', 503);
@@ -76,6 +77,12 @@ export async function createRestrictedStagingPool({ rawPool }) {
         if (!Array.isArray(args) || args.length !== 3 || !isSafeSubject(args[0]) ||
             typeof args[1] !== 'string' || !/^ws_[A-Za-z0-9_-]{8,128}$/.test(args[1]) ||
             !Number.isInteger(args[2]) || args[2] < 1 || args[2] > 50) fail();
+      } else if (sql === sessionSQL) {
+        const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!Array.isArray(args) || args.length!==3 ||
+           !uuid.test(args[0] || '') || !uuid.test(args[1] || '') ||
+           typeof args[2]!=='string' || args[2].length>254 ||
+           !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(args[2])) fail();
       } else fail();
 
       const client = await rawPool.connect();

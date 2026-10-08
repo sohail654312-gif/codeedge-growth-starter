@@ -87,6 +87,7 @@ type Tab =
   | 'Media library'
   | 'Settings';
 type Modal = 'lead' | 'request' | 'profile' | null;
+const emptyOverview: Overview = { profile: null, enquiries: [], requests: [], assets: [] };
 const sample: Overview = {
   profile: {
     name: 'Dr Ikram Wazir',
@@ -204,6 +205,7 @@ function App() {
   );
   const [data, setData] = useState<Overview>(sample);
   const [busy, setBusy] = useState(false);
+  const [loadingWorkspace, setLoadingWorkspace] = useState(false);
   const [notice, setNotice] = useState('');
   const [modal, setModal] = useState<Modal>(null);
   const [lead, setLead] = useState({
@@ -242,7 +244,10 @@ function App() {
       try {
         const current = await auth.getUser();
         if (!active || !current) return;
+        setLoadingWorkspace(true);
         setUser({ name: current.name, email: current.email });
+        // Clear illustrative records before private mode, even on an API error.
+        setData(emptyOverview);
         setDemo(false);
         const response = await api.get('/api/overview');
         if (active) {
@@ -252,6 +257,8 @@ function App() {
         }
       } catch {
         if (active) setNotice('Could not load your workspace. Try refreshing.');
+      } finally {
+        if (active) setLoadingWorkspace(false);
       }
     }
     initialise();
@@ -264,7 +271,9 @@ function App() {
     setNotice('');
     try {
       const { user: current } = await auth.signIn();
+      setLoadingWorkspace(true);
       setUser({ name: current.name, email: current.email });
+      setData(emptyOverview);
       setDemo(false);
       await refresh();
     } catch (e) {
@@ -276,6 +285,7 @@ function App() {
             : 'Sign-in was not completed.'
         );
     } finally {
+      setLoadingWorkspace(false);
       setBusy(false);
     }
   }
@@ -599,6 +609,7 @@ function App() {
           </div>
         )}
         <div className="page">
+          {loadingWorkspace && !demo && <div className="workspace-loading" role="status" aria-live="polite">Loading your private workspace…</div>}
           {tab === 'Overview' && (
             <ClinicOverview
               demo={demo}

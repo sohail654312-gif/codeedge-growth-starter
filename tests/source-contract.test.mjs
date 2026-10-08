@@ -57,3 +57,10 @@ test('server requires media rights and never automatically marks uploaded images
  assert.match(routes,/rightsDeclared!==true/);
  assert.match(routes,/consentStatus:'not_verified'/);
 });
+
+test('private workspace never displays fictional demo records while authentication data loads', () => {
+  assert.match(frontend, /const emptyOverview: Overview = \{ profile: null, enquiries: \[\], requests: \[\], assets: \[\] \}/);
+  assert.equal((frontend.match(/setData\(emptyOverview\)/g) || []).length, 2, 'Initial and popup sign-in clear demo records');
+  assert.match(frontend, /setLoadingWorkspace\(true\)/);
+  assert.match(frontend, /role="status" aria-live="polite"/);
+});

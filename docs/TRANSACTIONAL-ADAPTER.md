@@ -21,3 +21,8 @@ Verify under real concurrent sessions: exactly one invitation acceptance, verifi
 
 ## Media path and retention
 Per-workspace media must have server-enforced owner partition; consent is required before signed download URLs can be issued. The current image header/magic-byte tests do not decode full files or scan content. Secure deletion needs a persisted tombstone + outbox worker (idempotent, retryable) before physical removal. Videos require signed upload sessions and streaming rather than JSON/base64.
+
+## Verified AppDeploy SDK limitation (2026-10-08)
+Official SDK reference lists only `db.add`, `db.get`, `db.list`, `db.update`, `db.delete` for persisted table operations, with per-app quotas. It does not document ACID transactions, unique row constraints or compare-and-swap. `AuthUser` has `userId` and optional `email`, but no `emailVerified` attestation. The server's own `requireAuth` must remain in use.
+
+**Therefore no AppDeploy-native transactional membership adapter is implemented and invitations cannot be enabled.** The domain adapter and in-memory ACID simulation are architectural tests, not an assertion that the provider offers those guarantees.

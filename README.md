@@ -8,6 +8,8 @@ Standalone, mobile-first Codeedge growth portal for clinics and small local busi
 
 ## Phase 2 engineering update (draft PR only)
 
+**Latest continuation:** [Security and staging evidence](docs/PHASE2-CONTINUATION-EVIDENCE.md). The branch now includes fail-closed invitation/approval gates, a transaction-backed provider contract, simple client work progress UI, and secure media placeholders; none of this has been merged into production.
+
 An isolated, review-only core has been added on the Phase 2 engineering branch:
 - AppDeploy route adapter delegates to dependency-injected domain handlers; all private routes use SDK `requireAuth()`.
 - Owner workspace ID is derived from authenticated server user ID; existing owner-keyed tables are preserved for legacy records.

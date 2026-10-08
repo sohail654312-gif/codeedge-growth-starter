@@ -58,3 +58,6 @@ No self-certified phase closure: exact-SHA, independent acceptance evidence requ
 - [ ] Run full live-browser CRUD/accessibility and robust upload/retention QA
 
 **Deployment boundary:** `main` and the applied AppDeploy preview remain unchanged by this PR. No production deployment, merge or independent acceptance is claimed.
+
+## Continuation acceptance
+See [Phase 2 continuation evidence](PHASE2-CONTINUATION-EVIDENCE.md) for R1–R7 status, staging limitations, runtime API evidence and next gates. Real-clinic pilot remains blocked.

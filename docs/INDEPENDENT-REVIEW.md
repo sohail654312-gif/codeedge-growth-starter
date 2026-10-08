@@ -23,3 +23,15 @@
 
 ## Suggested next safe increment
 Implement a transactional, server-authoritative invitation/member adapter in disposable staging, and build separated agency/client screens with approval queue, then ask for independent cross-tenant review.
+
+## Phase 2 continuation reviewer additions (2026-10-08)
+- [ ] Verify exact current PR SHA from GitHub; read `docs/PHASE2-CONTINUATION-EVIDENCE.md`.
+- [ ] Cross-check mocked CI result against independent staging tests: do **not** infer tenant security from 32 passing mocks.
+- [ ] Confirm expired/inconsistent/replayed invitations, role self-grants and concurrent decisions are rejected by a real transactional DB, not just the in-memory harness.
+- [ ] Confirm server-verified email identity exists: `ctx.user.email` alone is **not** proof of email verification in current AppDeploy SDK typing.
+- [ ] Verify legacy forged grant rows cannot authorize foreign reads, writes or media; shared upload/approval/delete must remain 403/503 until dedicated adapters pass acceptance.
+- [ ] Use two distinctly authenticated synthetic sandbox users, not two tabs sharing a session. Require denied signed-image downloads across tenants and verify signed URL expiry/revocation behavior.
+- [ ] Inspect `WorkProgress` on mobile and keyboard; correction requests must be additive, not silent original state edits.
+- [ ] Inspect private media consent lifecycle, locked media rendering, tenant quotas and deletion outbox. Real patient/clinical images are forbidden for test.
+- [ ] Verify exact branch AppDeploy sandbox smoke evidence separately from the production preview; sandbox ready does not imply all backend endpoints were exercised.
+- [ ] Confirm no changes outside Growth Starter, no automated workers enabled and no PR merge/deploy.

@@ -28,3 +28,6 @@ Status: controlled preview; **NOT approved for production patient or confidentia
 - **R5 (MEDIUM) video is not implemented.** Large media cannot safely be sent through JSON/base64; require scoped direct-to-storage multipart/chunk uploads with an upload-complete validator, virus scanning and per-tenant lifecycle.
 - **R6 (MEDIUM) UI/realtime gap.** No trustworthy connected external analytics, automated Google/WhatsApp content publishing or agency/client collaboration UX.
 - **R7 (MEDIUM) repository currently public.** Source includes no secrets but the owner should review proprietary visibility and GitHub branch protection.
+
+## Continuation updates
+The engineering branch now DENIES foreign workspace access from legacy grant rows, disables non-atomic approval and deletion, and refuses to sign unapproved or foreign-owned media. Transactional membership and approval adapters are mock-tested but **not bound to AppDeploy**. See [Phase 2 continuation evidence](PHASE2-CONTINUATION-EVIDENCE.md). Production remains blocked.

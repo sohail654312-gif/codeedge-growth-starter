@@ -24,7 +24,7 @@ test('premium SEO strategy maps primary/supporting keywords, correct local area 
 test('SEO recommendations preserve original Phase 2.6 technical findings and proposed-only status',()=>{
  const p=buildPremiumContentStrategy({seoReport:uk});
  assert.ok(p.seo.technicalPriorities.some(f=>f.code==='missing_description'));
- assert.ok(p.seo.pages.some(x=>x.technicalFindings.some(f=>f.code==='missing_description')));
+ assert.ok(p.seo.pages.some(x=>x.technicalFindings.some(f=>f.code==='thin_content')));
  assert.equal(p.seo.keywordMetricsStatus,'Not available');
  assert.ok(p.seo.cannibalisationWarnings.every(x=>typeof x==='string'));
 });

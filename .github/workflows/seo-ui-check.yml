@@ -12,7 +12,7 @@ on:
       - 'src/premium-content.css'
       - 'backend/premium-content-intelligence.*'
       - 'backend/premium-content-demo.mjs'
-      - 'tests/premium-content-intelligence.test.mjs tests/website-proposals.test.mjs'
+      - 'tests/premium-content-intelligence.test.mjs'
       - 'src/SearchPerformancePanel.tsx'
       - 'src/seo-search-data.css'
       - 'backend/search-*.mjs'
@@ -73,4 +73,4 @@ jobs:
           node --check backend/premium-content-intelligence.mjs
           node --check backend/premium-content-demo.mjs
           node --check backend/website-proposals.mjs
-          node --test tests/seo-growth.test.mjs tests/seo-search-data.test.mjs tests/premium-content-intelligence.test.mjs
+          node --test tests/seo-growth.test.mjs tests/seo-search-data.test.mjs tests/premium-content-intelligence.test.mjs tests/website-proposals.test.mjs

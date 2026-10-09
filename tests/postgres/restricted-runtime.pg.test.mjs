@@ -112,3 +112,31 @@ test('unapproved extra database routine EXECUTE privilege blocks the staging gat
   }
   assert.equal((await createRestrictedStagingPool({rawPool:limited})).capabilities.readOnly,true);
 });
+
+test('privileged SECURITY DEFINER identity substitution remains HIGH with a compromised reader',async()=>{
+  // This is a NEGATIVE SECURITY FINDING, not a passing identity binding.
+  // A restricted reader can pass a different valid actor ID to an approved
+  // postgres-owned SECURITY DEFINER function and read the foreign workspace.
+  // Only a trusted gateway's correctly verified actor prevents it today.
+  const session=await limited.connect();
+  try{
+    await session.query('BEGIN READ ONLY');
+    await session.query('SET LOCAL ROLE growth_starter_reader');
+    const ownerA=await session.query('SELECT workspace_id FROM growth_starter.staging_list_workspaces($1)',[users[0].userId]);
+    const substitutedB=await session.query('SELECT workspace_id FROM growth_starter.staging_list_workspaces($1)',[users[1].userId]);
+    assert.deepEqual(ownerA.rows.map(r=>r.workspace_id),[workspace[0]]);
+    assert.deepEqual(substitutedB.rows.map(r=>r.workspace_id),[workspace[1]]);
+    const foreignRows=await session.query(
+      'SELECT id FROM growth_starter.staging_list_requests($1,$2,$3)',
+      [users[1].userId,workspace[1],20]
+    );
+    assert.deepEqual(foreignRows.rows.map(r=>r.id),['pilotReqTwo']);
+    // Direct access still prohibited: function privilege is the fault line.
+    await assert.rejects(session.query('SELECT id FROM growth_starter.workspaces'),e=>e.code==='42501');
+  }finally{
+    await session.query('ROLLBACK').catch(()=>{});
+    session.release();
+  }
+  // The application identity verifier still restricts public HTTP paths.
+  assert.equal((await call(users[0],'/v1/requests?workspaceId='+workspace[1])).status,403);
+});

@@ -35,5 +35,5 @@ React TypeScript and offline unit/e2e tests in CI are **not** equivalent to visu
 
 ## Phase 2.9 final exact-head CI closure
 
-The Phase 2.9 final verified PR HEAD was \`cddf16bc11d6fceab0284f1794df34f65012636e\`, not the earlier intermediate \`3c651c4b7d7d1334900587a26124d3c87ab56bee\`.
+The Phase 2.9 final verified PR HEAD was `cddf16bc11d6fceab0284f1794df34f65012636e`, not the earlier intermediate `3c651c4b7d7d1334900587a26124d3c87ab56bee`.
 Verified exact-head workflows: core [101/101](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38001262913), disposable PostgreSQL [35/35](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38001262895), staging supply-chain [13/13](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38001262835), and offline SEO UI [34/34](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38001262844), plus TypeScript PASS. Counts overlap. Source-only verdict PASS; hosted/live remains BLOCKED.

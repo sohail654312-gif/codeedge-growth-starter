@@ -15,9 +15,9 @@ const isoDate=s=>{
  return s;
 };
 const dayNum=d=>Date.parse(isoDate(d)+'T00:00:00Z')/86400000;
-function hostOf(value){
+function hostOf(value,{allowQuery=false}={}){
  const url=new URL(value);
- check(url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&!url.search&&!url.hash&&
+ check(url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&(allowQuery||!url.search)&&!url.hash&&
     url.hostname.includes('.')&&!url.hostname.startsWith('.')&&!/^\d/.test(url.hostname),'Unsafe property or page URL.');
  return url;
 }
@@ -55,7 +55,7 @@ export function validateSearchManifest(manifest,business){
   source:'user_supplied_search_console_export_unverified',verifiedByGoogleApi:false,scope});
 }
 function csvGrid(source){
- check(typeof source==='string'&&Buffer.byteLength(source,'utf8')<=SEARCH_IMPORT_LIMITS.bytes,
+ check(typeof source==='string'&&new TextEncoder().encode(source).byteLength<=SEARCH_IMPORT_LIMITS.bytes,
   'Import exceeds size limit.');
  check(!source.startsWith('\uFFFD')&&!source.includes('\0')&&!source.includes('\uFFFD'),'Unsupported or invalid encoding.');
  const body=source.replace(/^\uFEFF/,'');
@@ -99,7 +99,7 @@ function normalizeRow(raw,manifest,i){
   check(typeof value==='string'&&clean(value).length>0&&clean(value).length<=350,'Missing or oversized '+dim+' at row '+(i+1));
   value=clean(value);
   if(dim==='page'){
-   let url;try{url=hostOf(value);}catch{throw Error('Unsafe page URL at row '+(i+1));}
+   let url;try{url=hostOf(value,{allowQuery:true});}catch{throw Error('Unsafe page URL at row '+(i+1));}
    check(manifest.scope.matchPage(url),'Page outside approved property.');
    value=url.href;
   }
@@ -125,7 +125,7 @@ function normalizeRow(raw,manifest,i){
 }
 export function importSearchConsoleExport({content,format,manifest,business}){
  const metadata=validateSearchManifest(manifest,business);
- check(typeof content==='string'&&Buffer.byteLength(content,'utf8')<=SEARCH_IMPORT_LIMITS.bytes,'Invalid import size.');
+ check(typeof content==='string'&&new TextEncoder().encode(content).byteLength<=SEARCH_IMPORT_LIMITS.bytes,'Invalid import size.');
  let input;
  if(format==='csv'){
   const parsed=csvGrid(content);
@@ -256,6 +256,8 @@ export function interpretSeoInstruction({instruction,business,service,area,works
  check(typeof instruction==='string'&&instruction.trim().length>=8&&instruction.length<=300,'Bounded instruction required.');
  check(business.services.includes(service)&&business.serviceAreas.includes(area),'Choose an approved service and location.');
  const lower=instruction.toLowerCase();
+ check(!/\b(publish|deploy|post|send|delete|edit|rewrite|update|change|launch|run ads)\b/i.test(lower),
+   'External website changes and publication are not executable in offline analysis.');
  const intents=[
   /performance|click|impression|search console|traffic/.test(lower)?'search_performance':null,
   /keyword|query|search term/.test(lower)?'keyword_research':null,

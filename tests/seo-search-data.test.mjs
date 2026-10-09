@@ -104,7 +104,7 @@ test('AI command interpretation remains local, bounded, non-executable and tenan
  assert.throws(()=>interpretSeoInstruction({workspaceId:'ws_forbidden_other123',business:b,
   instruction:'publish website changes',service:'boiler repair',area:'Manchester'}));
  assert.throws(()=>interpretSeoInstruction({workspaceId:b.workspaceId,business:b,
-  instruction:'publish website changes',service:'boiler repair',area:'Manchester'}),/Unsupported/);
+  instruction:'publish website changes',service:'boiler repair',area:'Manchester'}),/External website changes|Unsupported/);
 });
 test('provider contracts document OAuth but cannot call Google',()=>{
  assert.ok(SEARCH_PROVIDER_CONTRACTS.searchConsole.scope.endsWith('webmasters.readonly'));

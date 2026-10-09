@@ -47,3 +47,6 @@ Do not commit API credentials, real clinic/patient content, production datasets 
 
 ## Phase 2.7 — offline Search Console analytics
 The `Google & SEO` view now supports local-only Search Console CSV/normalized JSON import and verified arithmetic on supplied rows. See [operator guide](docs/PHASE2-7-SEARCH-ANALYTICS.md) and [Phase 2.7 handoff](docs/PHASE2-7-HANDOFF.md). Live Google OAuth, external crawling, website edits and client database writes remain disabled.
+
+## Phase 2.9 — Premium offline content intelligence
+Growth Starter now offers evidence-scoped SEO, GEO-readiness, AEO answer drafts, SCO, local visibility suggestions and social content concepts in its existing navy/white offline review interface. It accepts only supplied-page and clearly labelled unverified Search Console evidence, with no real AI-search citation or Google provider claim. See [Phase 2.9 guide](docs/PHASE2-9-CONTENT-INTELLIGENCE.md) and [handoff](docs/PHASE2-9-HANDOFF.md). Publication, report persistence, agency writes, live Auth and crawling remain disabled.

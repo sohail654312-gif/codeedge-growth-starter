@@ -49,7 +49,8 @@ test('append-only revisions enforce optimistic version and duplicate evidence de
  assert.equal(first.approval,null);
  assert.throws(()=>prepareSeoReportRevision({history:[first],draft:make(),expectedRevision:1}),/Duplicate/);
  assert.throws(()=>prepareSeoReportRevision({history:[first],draft:make(seo,'different evidence'),expectedRevision:0}),/conflict/);
- const second=prepareSeoReportRevision({history:[first],draft:make(seo,'different evidence'),expectedRevision:1});
+ const changedReport={...seo,instruction:'Different reviewed SEO draft instruction'};
+ const second=prepareSeoReportRevision({history:[first],draft:make(changedReport,'different evidence'),expectedRevision:1});
  assert.equal(second.revision,2);
  assert.equal(second.previousReportDigest,first.reportDigest);
  assert.throws(()=>prepareSeoReportRevision({history:[first],draft:{...make(seo,'different evidence'),workspaceId:'ws_wrong_other_123'},expectedRevision:1}),/cross-workspace/);

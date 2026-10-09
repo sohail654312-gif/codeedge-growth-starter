@@ -69,6 +69,24 @@ test('foreign business, workspace, report and analysis are rejected before conte
  assert.throws(()=>buildPremiumContentStrategy({seoReport:uk,searchAnalysis:{...measured,property:'sc-domain:foreign.example'}}),/Mismatched/);
  assert.throws(()=>buildPremiumContentStrategy({seoReport:uk,searchAnalysis:{...measured,verification:'live_google_verified'}}),/untrusted/);
 });
+test('legitimate parent-domain Search Console property covers a fictional business subdomain',()=>{
+ const onSubdomain={...uk,business:{...uk.business,website:'https://north.atlas-plumbing.example/'}};
+ const report=buildPremiumContentStrategy({seoReport:onSubdomain,searchAnalysis:measured});
+ assert.equal(report.generatedFrom.searchEvidenceStatus,'user_supplied_gsc_not_live_verified');
+ assert.ok(report.seo.pages.length>0);
+});
+test('URL-prefix property scope and outside-site or deceptive suffix are safely rejected',()=>{
+ const site={...uk,business:{...uk.business,website:'https://atlas-plumbing.example/services/'}};
+ const prefix={...measured,property:'https://atlas-plumbing.example/services/',
+  opportunities:measured.opportunities.map(o=>({...o,evidence:{...o.evidence,property:'https://atlas-plumbing.example/services/'}}))};
+ assert.ok(buildPremiumContentStrategy({seoReport:site,searchAnalysis:prefix}).seo.pages.length>0);
+ assert.throws(()=>buildPremiumContentStrategy({seoReport:site,searchAnalysis:{
+  ...prefix,property:'https://atlas-plumbing.example/blog/',
+  opportunities:prefix.opportunities.map(o=>({...o,evidence:{...o.evidence,property:'https://atlas-plumbing.example/blog/'}}))
+ }}),/Mismatched/);
+ assert.throws(()=>buildPremiumContentStrategy({seoReport:{...uk,business:{...uk.business,website:'https://evilatlas-plumbing.example/'}},
+  searchAnalysis:measured}),/Mismatched/);
+});
 test('source-only content engine refuses wrong report version and fabricated search demand',()=>{
  assert.throws(()=>buildPremiumContentStrategy({seoReport:{...uk,version:'growth-starter.search-analysis.v1'}}),/Offline SEO/);
  const wrong={...uk,keywords:uk.keywords.map((k,i)=>i===0?{...k,metrics:{...k.metrics,searchVolume:40000}}:k)};

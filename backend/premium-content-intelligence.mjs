@@ -17,6 +17,24 @@ function evidenceForPage(page){
 function evidenceForKeyword(keyword){
  return {source:SOURCE.hypothesis,reference:keyword?.targetPage||null,observedAt:keyword?.provenance?.observedAt||null,claim:'not_verified_search_demand'};
 }
+function propertyCoversWebsite(property,website){
+ if(typeof property!=='string'||property.length>400)return false;
+ let site;
+ try{site=new URL(website);}catch{return false;}
+ if(site.protocol!=='https:'||site.username||site.password||site.port)return false;
+ if(property.startsWith('sc-domain:')){
+  const host=property.slice('sc-domain:'.length).toLowerCase();
+  if(!/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(host)||!host.includes('.') ||
+    host.includes('..'))return false;
+  return site.hostname===host || site.hostname.endsWith('.'+host);
+ }
+ try{
+  const prefix=new URL(property);
+  return prefix.protocol==='https:'&&prefix.origin===site.origin &&
+   !prefix.username&&!prefix.password&&!prefix.port&&!prefix.search&&!prefix.hash &&
+   site.pathname.startsWith(prefix.pathname);
+ }catch{return false;}
+}
 function verifyInputs(report,analysis){
  requireValid(report?.version==='growth-starter.seo-report.v1' &&
   report.mode==='offline_supplied_html_only' &&
@@ -37,10 +55,7 @@ function verifyInputs(report,analysis){
    analysis.externalActions?.enabled===false &&
    analysis.externalActions?.publishing===false &&
    analysis.externalActions?.persistentWrites===false,'Cross-workspace, untrusted or connected search evidence refused.');
-  const host=new URL(business.website).hostname;
-  requireValid(typeof analysis.property==='string' &&
-   (analysis.property==='sc-domain:'+host || analysis.property==='https://'+host+'/' ||
-    analysis.property==='https://'+host) &&
+  requireValid(propertyCoversWebsite(analysis.property,business.website) &&
    Array.isArray(analysis.opportunities) && analysis.opportunities.length<=60,
    'Mismatched Search Console property or oversized observations.');
   requireValid(analysis.opportunities.every(o=>o.evidence?.property===analysis.property &&

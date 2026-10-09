@@ -1,5 +1,14 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {"noEmit": true},
-  "include": ["src/SeoGrowthManager.tsx", "backend/seo-growth.d.mts", "backend/seo-fixtures.d.mts"]
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/SeoGrowthManager.tsx",
+    "backend/seo-growth.d.mts",
+    "backend/seo-fixtures.d.mts",
+    "src/SearchPerformancePanel.tsx",
+    "backend/seo-search-data.d.mts",
+    "backend/search-fixtures.d.mts"
+  ]
 }

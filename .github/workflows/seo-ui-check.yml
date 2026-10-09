@@ -4,6 +4,12 @@ on:
     branches: [engineering/phase2-core-security]
     paths:
       - 'src/SeoGrowthManager.tsx'
+      - 'src/SearchPerformancePanel.tsx'
+      - 'src/seo-search-data.css'
+      - 'backend/search-*.mjs'
+      - 'backend/search-*.d.mts'
+      - 'backend/seo-search-data.*'
+      - 'tests/seo-search-data.test.mjs'
       - 'src/seo-growth.css'
       - 'backend/seo-*.mjs'
       - 'backend/seo-*.d.mts'
@@ -13,6 +19,12 @@ on:
     branches: [main]
     paths:
       - 'src/SeoGrowthManager.tsx'
+      - 'src/SearchPerformancePanel.tsx'
+      - 'src/seo-search-data.css'
+      - 'backend/search-*.mjs'
+      - 'backend/search-*.d.mts'
+      - 'backend/seo-search-data.*'
+      - 'tests/seo-search-data.test.mjs'
       - 'src/seo-growth.css'
       - 'backend/seo-*.mjs'
       - 'backend/seo-*.d.mts'
@@ -38,4 +50,6 @@ jobs:
           node --check backend/seo-growth.mjs
           node --check backend/seo-fixtures.mjs
           node --check backend/seo-demo.mjs
-          node --test tests/seo-growth.test.mjs
+          node --check backend/seo-search-data.mjs
+          node --check backend/search-demo.mjs
+          node --test tests/seo-growth.test.mjs tests/seo-search-data.test.mjs

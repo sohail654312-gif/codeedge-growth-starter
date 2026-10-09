@@ -4,6 +4,7 @@ import {FICTIONAL_SEO_FIXTURES} from '../backend/seo-fixtures.mjs';
 import {runOfflineGrowthReport,exportKeywordCsv} from '../backend/seo-growth.mjs';
 import type {SeoReport} from '../backend/seo-growth.mjs';
 import './seo-growth.css';
+import SearchPerformancePanel from './SearchPerformancePanel';
 
 type DemoChoice='plumbing'|'clinic';
 function saveLocally(fileName:string,data:string,type:string){
@@ -159,5 +160,6 @@ export default function SeoGrowthManager({demo}:{demo:boolean}){
         All keyword demand, CPC, rankings, AI citations and traffic metrics: <strong>Not available.</strong> Nothing was saved or published. Live analytics require separately approved provider OAuth and verified tenant isolation.
       </span></div>
     </div>}
+    <SearchPerformancePanel seoReport={report} fictionalKind={choice}/>
   </section>;
 }

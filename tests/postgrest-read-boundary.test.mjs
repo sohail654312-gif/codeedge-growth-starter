@@ -66,3 +66,13 @@ test('foreign workspace list, foreign request and malformed scope never release 
   await assert.rejects(wrongRow.reader.listRequests(bearer,'ws_wrong',20),e=>e.status===400);
   await assert.rejects(wrongRow.reader.listRequests(bearer,wa,51),e=>e.status===400);
 });
+
+test('bounded page offsets are passed to PostgREST and invalid pagination denied before access',async()=>{
+  const {reader,calls}=fixture();
+  await reader.listRequests(bearer,wa,10,20);
+  const request=calls.find(c=>c.url.includes('/rest/v1/work_requests'));
+  assert.equal(new URL(request.url).searchParams.get('limit'),'10');
+  assert.equal(new URL(request.url).searchParams.get('offset'),'20');
+  await assert.rejects(reader.listRequests(bearer,wa,10,21),e=>e.status===400);
+  await assert.rejects(reader.listRequests(bearer,wa,10,960),e=>e.status===400);
+});

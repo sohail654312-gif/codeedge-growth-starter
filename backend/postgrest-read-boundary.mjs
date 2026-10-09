@@ -99,21 +99,24 @@ export function createPostgrestReadBoundary({projectUrl,publishableKey,verifyCur
       const actor=await subject(authorization);
       return Object.freeze({workspaces:await workspacesFor(actor)});
     },
-    async listRequests(authorization,workspaceId,limit=20) {
-      if(!WS.test(workspaceId||'') || !Number.isInteger(limit) || limit<1 || limit>50)
-        throw new PostgrestBoundaryError('Invalid workspace or limit.',400);
+    async listRequests(authorization,workspaceId,limit=20,offset=0) {
+      if(!WS.test(workspaceId||'') || !Number.isInteger(limit) || limit<1 || limit>50 ||
+         !Number.isInteger(offset) || offset<0 || offset>950 || offset%limit!==0)
+        throw new PostgrestBoundaryError('Invalid workspace, limit or offset.',400);
       const actor=await subject(authorization);
       const allowed=await workspacesFor(actor);
       if(!allowed.some(w=>w.workspace_id===workspaceId))deny(403);
       const rows=await select('work_requests',actor.token,{
         select:'id,workspace_id,title,kind,status,version,updated_at',
-        workspace_id:'eq.'+workspaceId,order:'updated_at.desc,id.asc',limit:String(limit)
+        workspace_id:'eq.'+workspaceId,order:'updated_at.desc,id.asc',limit:String(limit),offset:String(offset)
       },limit);
       for(const row of rows) {
         if(!row || row.workspace_id!==workspaceId ||
            typeof row.id!=='string' || !/^[A-Za-z0-9_-]{1,128}$/.test(row.id) ||
-           typeof row.title!=='string' || typeof row.kind!=='string' ||
-           typeof row.status!=='string' || !Number.isInteger(row.version))deny();
+           typeof row.title!=='string' || row.title.length<1 || row.title.length>100 ||
+           !['Website update','Social content','Local SEO','Other'].includes(row.kind) ||
+           !['Requested','In progress','Awaiting approval','Approved','Changes requested','Completed'].includes(row.status) ||
+           !Number.isInteger(row.version) || row.version<0)deny();
       }
       return Object.freeze({workspaceId,items:rows});
     }

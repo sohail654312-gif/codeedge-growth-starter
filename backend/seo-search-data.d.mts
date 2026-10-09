@@ -8,6 +8,7 @@ export type SearchAnalysis={version:'growth-starter.search-analysis.v1';workspac
  keywords:Array<{phrase:string;searchEvidence:{status:string}}>;
  aeoProposals:Array<{question:string;answerDraft:string;status:string}>;
  comparison:null|{status:string;change:{clicks:number;impressions:number;ctrPercentagePoints:number|null;averagePosition:number|null};warning:string};
+ existingSeoFindings:Array<{code:string;finding:string;url:string}>;
  proposedTasks:Array<{finding:string;recommendation:string;status:string}>;
  limitations:string[];verification:string;externalActions:{enabled:false;publishing:false;persistentWrites:false}};
 export function importSearchConsoleExport(input:{content:string;format:'csv'|'json';manifest:SearchManifest;business:SeoBusiness}):SearchEvidence;

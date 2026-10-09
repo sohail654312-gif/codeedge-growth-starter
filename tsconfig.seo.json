@@ -9,6 +9,8 @@
     "backend/seo-fixtures.d.mts",
     "src/SearchPerformancePanel.tsx",
     "backend/seo-search-data.d.mts",
-    "backend/search-fixtures.d.mts"
+    "backend/search-fixtures.d.mts",
+    "src/PremiumContentPanel.tsx",
+    "backend/premium-content-intelligence.d.mts"
   ]
 }

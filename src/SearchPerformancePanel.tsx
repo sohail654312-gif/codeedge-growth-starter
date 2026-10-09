@@ -17,8 +17,9 @@ function download(name:string,value:string,type:string){
   try{const anchor=document.createElement('a');anchor.href=url;anchor.download=name;anchor.click();}
   finally{window.setTimeout(()=>URL.revokeObjectURL(url),1000);}
 }
-export default function SearchPerformancePanel({seoReport,fictionalKind}:{
+export default function SearchPerformancePanel({seoReport,fictionalKind,onAnalysis,onReset}:{
   seoReport:SeoReport|null;fictionalKind:'plumbing'|'clinic';
+  onAnalysis?:(seo:SeoReport,analysis:SearchAnalysis)=>void;onReset?:()=>void;
 }){
  const [mode,setMode]=useState<InputMode>('fictional');
  const [name,setName]=useState('My authorised business');
@@ -43,8 +44,9 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
  const [beforeEnd,setBeforeEnd]=useState('2026-08-31');
  const [error,setError]=useState('');
  const selected=FICTIONAL_SEO_FIXTURES[fictionalKind];
+ function resetResult(){setResult(null);onReset?.();}
  function changeMode(next:InputMode){
-   setMode(next);setResult(null);setFileText('');setFileLabel('');setError('');
+   setMode(next);resetResult();setFileText('');setFileLabel('');setError('');
    setProperty(next==='fictional'?'sc-domain:'+new URL(selected.business.website).hostname:'');
     setBeforeText('');setBeforeLabel('');
  }
@@ -75,10 +77,12 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
     service:base.business.services[0],area:base.business.serviceAreas[0],
     instruction:'Review search performance, suggest keywords and answer questions.',
     evidenceSources:['offline_html','user_import_gsc']});
-  return analyzeImportedSearchEvidence(base,parsed,{previous});
+  const output=analyzeImportedSearchEvidence(base,parsed,{previous});
+   onAnalysis?.(base,output);
+   return output;
  }
  async function pickFile(file:File|undefined){
-  setResult(null);setError('');setFileText('');setFileLabel('');
+  resetResult();setError('');setFileText('');setFileLabel('');
   if(!file)return;
   if(file.size>SEARCH_IMPORT_LIMITS.bytes){setError('The import exceeds the 512 KB local limit.');return;}
   const next=file.name.toLowerCase().endsWith('.csv')?'csv':file.name.toLowerCase().endsWith('.json')?'json':null;
@@ -87,7 +91,7 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
   catch{setError('Unable to read this file locally.');}
  }
  function sample(){
-  setError('');setResult(null);
+  setError('');resetResult();
   try{
     if(mode!=='fictional'||fictionalKind!=='plumbing')throw Error('The supplied fictional Search Console sample belongs only to Atlas Plumbing.');
     const output=createAnalysis(FICTIONAL_GSC.csv,'csv',FICTIONAL_GSC.manifest.property,
@@ -99,7 +103,7 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
   }catch(e){setError(e instanceof Error?e.message:'Example unavailable.');}
  }
  async function pickComparisonFile(file:File|undefined){
-  setBeforeText('');setBeforeLabel('');setResult(null);setError('');
+  setBeforeText('');setBeforeLabel('');resetResult();setError('');
   if(!file)return;
   if(file.size>SEARCH_IMPORT_LIMITS.bytes){setError('Comparison exceeds 512 KB.');return;}
   const kind=file.name.toLowerCase().endsWith('.csv')?'csv':file.name.toLowerCase().endsWith('.json')?'json':null;
@@ -107,7 +111,7 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
   try{setBeforeText(await file.text());setBeforeFormat(kind);setBeforeLabel(file.name);}catch{setError('Unable to read comparison file locally.');}
  }
  function analyze(){
-  setError('');setResult(null);
+  setError('');resetResult();
   try{
     if(!fileText)throw Error('Choose a file or load the fictional example first.');
     setResult(createAnalysis(fileText,format));
@@ -137,12 +141,12 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
       </label>
     </div>}
     <label>GSC property (explicit)<input value={property} maxLength={380}
-      onChange={e=>{setProperty(e.target.value);setResult(null);}} placeholder="sc-domain:example.com or https://example.com/"/></label>
-    <label>Table dimensions<select value={table} onChange={e=>{setTable(e.target.value as TableType);setResult(null);}}>
+      onChange={e=>{setProperty(e.target.value);resetResult();}} placeholder="sc-domain:example.com or https://example.com/"/></label>
+    <label>Table dimensions<select value={table} onChange={e=>{setTable(e.target.value as TableType);resetResult();}}>
       <option value="query">Queries CSV</option><option value="page">Pages CSV</option>
     </select></label>
-    <label>From<input type="date" value={start} onChange={e=>{setStart(e.target.value);setResult(null);}}/></label>
-    <label>To<input type="date" value={end} onChange={e=>{setEnd(e.target.value);setResult(null);}}/></label>
+    <label>From<input type="date" value={start} onChange={e=>{setStart(e.target.value);resetResult();}}/></label>
+    <label>To<input type="date" value={end} onChange={e=>{setEnd(e.target.value);resetResult();}}/></label>
     <label className="gsc-span">Choose CSV or normalized JSON export (max 512 KB)
       <input type="file" accept=".csv,.json,text/csv,application/json" onChange={e=>{void pickFile(e.target.files?.[0]);}}/>
       <small>{fileLabel||'No local export selected. Google Search Console may export multiple distinct CSV tabs; import one at a time.'}</small>
@@ -150,8 +154,8 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
     <details className="gsc-comparison gsc-span"><summary>Optional: compare with an earlier period</summary>
       <p>Use the same property's equivalent table for an equally long, non-overlapping period. Differences are observations, not evidence of causation.</p>
       <div className="gsc-comparison-grid">
-        <label>Earlier from<input type="date" value={beforeStart} onChange={e=>{setBeforeStart(e.target.value);setResult(null);}}/></label>
-        <label>Earlier to<input type="date" value={beforeEnd} onChange={e=>{setBeforeEnd(e.target.value);setResult(null);}}/></label>
+        <label>Earlier from<input type="date" value={beforeStart} onChange={e=>{setBeforeStart(e.target.value);resetResult();}}/></label>
+        <label>Earlier to<input type="date" value={beforeEnd} onChange={e=>{setBeforeEnd(e.target.value);resetResult();}}/></label>
       </div>
       <label>Earlier export CSV or JSON<input type="file" accept=".csv,.json,text/csv,application/json"
        onChange={e=>{void pickComparisonFile(e.target.files?.[0]);}}/>
@@ -159,7 +163,7 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
       {mode==='fictional'&&fictionalKind==='plumbing'&&<button type="button" onClick={()=>{
         setBeforeText(FICTIONAL_GSC.earlierCsv);setBeforeFormat('csv');
         setBeforeStart(FICTIONAL_GSC.earlier.startDate);setBeforeEnd(FICTIONAL_GSC.earlier.endDate);
-        setBeforeLabel('FICTIONAL EARLIER EXAMPLE');setResult(null);}}>Load fictional earlier period</button>}
+        setBeforeLabel('FICTIONAL EARLIER EXAMPLE');resetResult();}}>Load fictional earlier period</button>}
     </details>
    </div>
    <div className="gsc-buttons">

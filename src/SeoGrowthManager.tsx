@@ -5,6 +5,8 @@ import {runOfflineGrowthReport,exportKeywordCsv} from '../backend/seo-growth.mjs
 import type {SeoReport} from '../backend/seo-growth.mjs';
 import './seo-growth.css';
 import SearchPerformancePanel from './SearchPerformancePanel';
+import PremiumContentPanel from './PremiumContentPanel';
+import type {SearchAnalysis} from '../backend/seo-search-data.mjs';
 
 type DemoChoice='plumbing'|'clinic';
 function saveLocally(fileName:string,data:string,type:string){
@@ -23,15 +25,16 @@ export default function SeoGrowthManager({demo}:{demo:boolean}){
   const [providedHtml,setProvidedHtml]=useState('');
   const [acknowledge,setAcknowledge]=useState(false);
   const [report,setReport]=useState<SeoReport|null>(null);
+  const [premiumSource,setPremiumSource]=useState<{seo:SeoReport;analysis:SearchAnalysis}|null>(null);
   const [error,setError]=useState('');
   const selected=FICTIONAL_SEO_FIXTURES[choice];
   function switchDemo(value:DemoChoice){
     const next=FICTIONAL_SEO_FIXTURES[value];
     setChoice(value);setService(next.business.services[0]);setArea(next.business.serviceAreas[0]);
-    setProvidedHtml('');setAcknowledge(false);setReport(null);setError('');
+    setProvidedHtml('');setAcknowledge(false);setReport(null);setPremiumSource(null);setError('');
   }
   function generate(){
-    setReport(null);setError('');
+    setReport(null);setPremiumSource(null);setError('');
     try{
       if(providedHtml && !acknowledge)throw Error('Confirm you are authorised to use the supplied HTML.');
       const business={...selected.business,services:[service],serviceAreas:[area]};
@@ -160,6 +163,8 @@ export default function SeoGrowthManager({demo}:{demo:boolean}){
         All keyword demand, CPC, rankings, AI citations and traffic metrics: <strong>Not available.</strong> Nothing was saved or published. Live analytics require separately approved provider OAuth and verified tenant isolation.
       </span></div>
     </div>}
-    <SearchPerformancePanel seoReport={report} fictionalKind={choice}/>
+    <SearchPerformancePanel key={choice} seoReport={report} fictionalKind={choice}
+      onAnalysis={(seo,analysis)=>setPremiumSource({seo,analysis})} onReset={()=>setPremiumSource(null)}/>
+    <PremiumContentPanel seoReport={premiumSource?.seo||report} searchAnalysis={premiumSource?.analysis||null}/>
   </section>;
 }

@@ -50,3 +50,6 @@ The `Google & SEO` view now supports local-only Search Console CSV/normalized JS
 
 ## Phase 2.9 — Premium offline content intelligence
 Growth Starter now offers evidence-scoped SEO, GEO-readiness, AEO answer drafts, SCO, local visibility suggestions and social content concepts in its existing navy/white offline review interface. It accepts only supplied-page and clearly labelled unverified Search Console evidence, with no real AI-search citation or Google provider claim. See [Phase 2.9 guide](docs/PHASE2-9-CONTENT-INTELLIGENCE.md) and [handoff](docs/PHASE2-9-HANDOFF.md). Publication, report persistence, agency writes, live Auth and crawling remain disabled.
+
+## Phase 3.0 — review-only content changes and security cutover preparation
+The premium SEO desk now provides browser-local before/after website proposals and correction-note download with no editing/publishing capability. A review-only SQL draft and disposable test prepare retirement of the vulnerable actor-supplied SECURITY DEFINER reader functions; hosted security still BLOCKED. See [Phase 3.0 handoff](docs/PHASE3-0-HANDOFF.md).

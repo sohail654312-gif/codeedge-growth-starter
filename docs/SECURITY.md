@@ -52,3 +52,9 @@ Owner-approved Supabase staging now has migrations 0001–0005, RLS 7/7 default 
 - Both restricted roles remain NOLOGIN. No dedicated TLS/CA-verified hosted PostgreSQL client with secret-managed credentials has been established, and no real test users/sessions exist. Do not enable agency mutation or patient media.
 - The manual `staging/hosted-acceptance.mjs` runner prevents synthetic-only verification being mistaken for a real hosted HTTP pass; there is no runnable hosted gateway yet.
 - Staging dependencies have a committed lockfile, cloud CI `npm ci`, an audit gate and mock gateway-config safety tests. See [Phase 2.4 handoff](PHASE2-4-HANDOFF.md).
+
+## Phase 2.7 imported Search Console evidence
+- Browser-only import: no token, Google OAuth, upload, remote crawl, automatic SEO edit or storage. All imported measurements are **unverified user supplied** and may be partial GSC row subsets. Never label as live Google-verified results.
+- The import validates explicit business workspace/property, dimensional consistency, bounded UTF-8 CSV/JSON sizes, numeric clicks/impressions/CTR/position and dates; CSV formula-like output is quoted/neutralized. This does not authenticate local businesses or prove ownership—consent checkbox is an assertion only.
+- A `sc-domain` property may cover subdomains, while URL-prefix properties require matching origin/path. Individual page rows must remain in the declared property. Query and page reports cannot be summed or joined as equivalent property totals.
+- Existing Phase 2.5 HIGH privileged `SECURITY DEFINER` identity-substitution vulnerability and hosted NoLogin remain OPEN; no OAuth token storage, real-client report persistence or agency writes approved. See [Phase 2.7 guide](PHASE2-7-SEARCH-ANALYTICS.md).

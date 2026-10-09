@@ -82,3 +82,6 @@ Implemented a token-redacting two-user acceptance runner and seeded-fixture requ
 
 ## Phase 2.6 offline SEO/AEO Growth Manager
 Replaced static Google/SEO marketing content with a deterministic, provider-neutral offline keyword/HTML/AEO planning engine, two fictional UK/Pakistan fixtures, reviewable tasks and local report exports. Added a targeted TypeScript UI CI check. Does not crawl public networks, connect real analytics, save client reports or publish anything. See [Phase 2.6 handoff](PHASE2-6-HANDOFF.md) and [research/security notes](PHASE2-6-SEO-GROWTH-MANAGER.md).
+
+## Phase 2.7 user-supplied Search Console reporting
+Added offline GSC CSV/JSON import, weighted metrics, measured-query recommendations, optional restricted period comparison, local responsive reporting and permission-scoped synthetic provider adapter. **No real Google API authentication or live application data sharing.** See [Phase 2.7 handoff](PHASE2-7-HANDOFF.md).

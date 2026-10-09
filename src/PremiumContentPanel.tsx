@@ -4,7 +4,8 @@ import type {SeoReport} from '../backend/seo-growth.mjs';
 import type {SearchAnalysis} from '../backend/seo-search-data.mjs';
 import {buildPremiumContentStrategy,exportPremiumStrategyCsv} from '../backend/premium-content-intelligence.mjs';
 import './premium-content.css';
-type Tab='seo'|'geo'|'aeo'|'sco'|'social';
+import WebsiteProposalDesk from './WebsiteProposalDesk';
+type Tab='seo'|'geo'|'aeo'|'sco'|'social'|'website';
 function saveOffline(name:string,value:string,mime:string){
  const url=URL.createObjectURL(new Blob([value],{type:mime}));
  try{const link=document.createElement('a');link.href=url;link.download=name;link.click();}
@@ -24,7 +25,8 @@ export default function PremiumContentPanel({seoReport,searchAnalysis=null}:{
  const menu:Array<{id:Tab;label:string}>=[
   {id:'seo',label:'SEO strategy'},{id:'geo',label:'GEO readiness'},
   {id:'aeo',label:'Answers & FAQ'},{id:'sco',label:'SCO & local'},
-  {id:'social',label:'Social content'}
+  {id:'social',label:'Social content'},
+  {id:'website',label:'Website changes'}
  ];
  return <section className="pci" aria-label="Premium SEO GEO AEO and content intelligence">
   <header className="pci-top">
@@ -112,6 +114,9 @@ export default function PremiumContentPanel({seoReport,searchAnalysis=null}:{
     {plan.social.proposals.map(s=><div className="pci-draft" key={s.id}>
      <strong>{s.suggestedHook}</strong><p>{s.concept}</p>
      <small>Format ideas: {s.channelIdeas.join(', ')} · {s.status.replace(/_/g,' ')}</small></div>)}
+   </article>}
+   {tab==='website'&&seoReport&&<article className="pci-section">
+    <WebsiteProposalDesk seoReport={seoReport} premiumPlan={plan}/>
    </article>}
    <div className="pci-actions">
     <button type="button" onClick={()=>saveOffline('codeedge-premium-content-plan.json',JSON.stringify(plan,null,2),'application/json')}><Download size={15}/> Full JSON plan</button>

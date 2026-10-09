@@ -11,6 +11,8 @@
     "backend/seo-search-data.d.mts",
     "backend/search-fixtures.d.mts",
     "src/PremiumContentPanel.tsx",
-    "backend/premium-content-intelligence.d.mts"
+    "backend/premium-content-intelligence.d.mts",
+    "src/WebsiteProposalDesk.tsx",
+    "backend/website-proposals.d.mts"
   ]
 }

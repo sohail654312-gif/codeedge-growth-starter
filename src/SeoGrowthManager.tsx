@@ -70,19 +70,19 @@ export default function SeoGrowthManager({demo}:{demo:boolean}){
           </select>
         </label>
         <label>Target service
-          <select value={service} onChange={e=>{setService(e.target.value);setReport(null);}}>
+          <select value={service} onChange={e=>{setService(e.target.value);setReport(null);setPremiumSource(null);}}>
             {selected.business.services.map(x=><option key={x}>{x}</option>)}
           </select>
         </label>
         <label>Target location
-          <select value={area} onChange={e=>{setArea(e.target.value);setReport(null);}}>
+          <select value={area} onChange={e=>{setArea(e.target.value);setReport(null);setPremiumSource(null);}}>
             {selected.business.serviceAreas.map(x=><option key={x}>{x}</option>)}
           </select>
         </label>
       </div>
       <div className="sgm-section-label"><span>2</span><strong>Tell Codeedge what you want to improve</strong></div>
       <label className="sgm-full">Your instruction
-        <textarea value={instruction} onChange={e=>{setInstruction(e.target.value);setReport(null);}}
+        <textarea value={instruction} onChange={e=>{setInstruction(e.target.value);setReport(null);setPremiumSource(null);}}
           maxLength={300} rows={2} aria-describedby="sgm-command-help"/>
       </label>
       <p id="sgm-command-help" className="sgm-hint">The instruction is recorded as the brief. Targeting comes from the selected service and area; no chatbot or external AI API is being called.</p>
@@ -90,7 +90,7 @@ export default function SeoGrowthManager({demo}:{demo:boolean}){
         <p>Paste only public, nonsensitive page HTML you own or are authorised to inspect. It replaces the fictional homepage fixture for this temporary offline analysis. No network requests are made.</p>
         <label>Page HTML (maximum 120,000 characters)
           <textarea value={providedHtml} maxLength={120000} rows={4}
-            onChange={e=>{setProvidedHtml(e.target.value);setReport(null);}} placeholder="<!doctype html>..."/>
+            onChange={e=>{setProvidedHtml(e.target.value);setReport(null);setPremiumSource(null);}} placeholder="<!doctype html>..."/>
         </label>
         {providedHtml&&<label className="sgm-check"><input type="checkbox" checked={acknowledge}
           onChange={e=>setAcknowledge(e.target.checked)}/>

@@ -36,11 +36,17 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
  const [format,setFormat]=useState<'csv'|'json'>('csv');
  const [fileLabel,setFileLabel]=useState('');
  const [result,setResult]=useState<SearchAnalysis|null>(null);
+ const [beforeText,setBeforeText]=useState('');
+ const [beforeFormat,setBeforeFormat]=useState<'csv'|'json'>('csv');
+ const [beforeLabel,setBeforeLabel]=useState('');
+ const [beforeStart,setBeforeStart]=useState('2026-08-02');
+ const [beforeEnd,setBeforeEnd]=useState('2026-08-31');
  const [error,setError]=useState('');
  const selected=FICTIONAL_SEO_FIXTURES[fictionalKind];
  function changeMode(next:InputMode){
    setMode(next);setResult(null);setFileText('');setFileLabel('');setError('');
    setProperty(next==='fictional'?'sc-domain:'+new URL(selected.business.website).hostname:'');
+    setBeforeText('');setBeforeLabel('');
  }
  function manualReport():SeoReport{
   if(!sourceAck)throw Error('Confirm website/HTML and export authorisation first.');
@@ -63,11 +69,13 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
   const manifest:SearchManifest={workspaceId:base.workspaceId,property:currentProperty,
     searchType:'web',dimensions:[currentTable],startDate:currentStart,endDate:currentEnd};
   const parsed=importSearchConsoleExport({content,format:kind,manifest,business:base.business});
+   const previous=beforeText?importSearchConsoleExport({content:beforeText,format:beforeFormat,
+     manifest:{...manifest,startDate:beforeStart,endDate:beforeEnd},business:base.business}):null;
   interpretSeoInstruction({workspaceId:base.workspaceId,business:base.business,
     service:base.business.services[0],area:base.business.serviceAreas[0],
     instruction:'Review search performance, suggest keywords and answer questions.',
     evidenceSources:['offline_html','user_import_gsc']});
-  return analyzeImportedSearchEvidence(base,parsed);
+  return analyzeImportedSearchEvidence(base,parsed,{previous});
  }
  async function pickFile(file:File|undefined){
   setResult(null);setError('');setFileText('');setFileLabel('');
@@ -89,6 +97,14 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
     setFileLabel('FICTIONAL EXAMPLE — not a real Google export');setFileText(FICTIONAL_GSC.csv);
     setFormat('csv');setResult(output);
   }catch(e){setError(e instanceof Error?e.message:'Example unavailable.');}
+ }
+ async function pickComparisonFile(file:File|undefined){
+  setBeforeText('');setBeforeLabel('');setResult(null);setError('');
+  if(!file)return;
+  if(file.size>SEARCH_IMPORT_LIMITS.bytes){setError('Comparison exceeds 512 KB.');return;}
+  const kind=file.name.toLowerCase().endsWith('.csv')?'csv':file.name.toLowerCase().endsWith('.json')?'json':null;
+  if(!kind){setError('Comparison requires CSV or normalized JSON.');return;}
+  try{setBeforeText(await file.text());setBeforeFormat(kind);setBeforeLabel(file.name);}catch{setError('Unable to read comparison file locally.');}
  }
  function analyze(){
   setError('');setResult(null);
@@ -131,6 +147,20 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
       <input type="file" accept=".csv,.json,text/csv,application/json" onChange={e=>{void pickFile(e.target.files?.[0]);}}/>
       <small>{fileLabel||'No local export selected. Google Search Console may export multiple distinct CSV tabs; import one at a time.'}</small>
     </label>
+    <details className="gsc-comparison gsc-span"><summary>Optional: compare with an earlier period</summary>
+      <p>Use the same property's equivalent table for an equally long, non-overlapping period. Differences are observations, not evidence of causation.</p>
+      <div className="gsc-comparison-grid">
+        <label>Earlier from<input type="date" value={beforeStart} onChange={e=>{setBeforeStart(e.target.value);setResult(null);}}/></label>
+        <label>Earlier to<input type="date" value={beforeEnd} onChange={e=>{setBeforeEnd(e.target.value);setResult(null);}}/></label>
+      </div>
+      <label>Earlier export CSV or JSON<input type="file" accept=".csv,.json,text/csv,application/json"
+       onChange={e=>{void pickComparisonFile(e.target.files?.[0]);}}/>
+       <small>{beforeLabel||'No earlier period selected.'}</small></label>
+      {mode==='fictional'&&fictionalKind==='plumbing'&&<button type="button" onClick={()=>{
+        setBeforeText(FICTIONAL_GSC.earlierCsv);setBeforeFormat('csv');
+        setBeforeStart(FICTIONAL_GSC.earlier.startDate);setBeforeEnd(FICTIONAL_GSC.earlier.endDate);
+        setBeforeLabel('FICTIONAL EARLIER EXAMPLE');setResult(null);}}>Load fictional earlier period</button>}
+    </details>
    </div>
    <div className="gsc-buttons">
      {mode==='fictional'&&fictionalKind==='plumbing'&&<button type="button" onClick={sample}><FileSearch size={16}/> Try fictional Search Console report</button>}
@@ -146,6 +176,10 @@ export default function SearchPerformancePanel({seoReport,fictionalKind}:{
       <div><strong>{rate(result.summary.ctr)}</strong><span>Weighted CTR</span></div>
       <div><strong>{result.summary.averagePosition===null?'Not available':result.summary.averagePosition.toFixed(2)}</strong><span>Impression-weighted position</span></div>
     </div>
+    {result.comparison&&<article className="gsc-before-after"><h4>Comparable earlier period (user-supplied data)</h4>
+      <p>Click change: {result.comparison.change.clicks>0?'+':''}{result.comparison.change.clicks} · Impression change: {result.comparison.change.impressions>0?'+':''}{result.comparison.change.impressions} · CTR change: {result.comparison.change.ctrPercentagePoints===null?'Not available':result.comparison.change.ctrPercentagePoints.toFixed(2)+' pp'}</p>
+      <p>{result.comparison.warning}</p>
+    </article>}
     <article><h4>Evidence-backed opportunities</h4>
       {result.opportunities.length===0?<p>No service-related search queries were found in this selected report. This is not proof of zero demand.</p>:
       result.opportunities.slice(0,8).map((item,i)=><div key={i} className="gsc-opportunity"><strong>{item.query}</strong>

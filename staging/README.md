@@ -1,50 +1,101 @@
-# Separately deployable staging-only Growth Starter API
+# Growth Starter staging operations — Phase 3.3C
 
-This is **not** the public Growth Starter frontend and must not be wired to production until hosted acceptance passes.
+**Current status: NOT HOSTED / NOT ACCEPTED.** Never route real clients to these services.
 
-The entrypoint `staging/server.mjs` launches the existing read-only gateway, but ONLY after:
-- Mandatory environment configuration is present (see `staging/config.mjs`).
-- The database URL references the exact Supabase project origin and the separate `growth_starter_runtime` non-owner LOGIN. Pooler connections use `growth_starter_runtime.<project-ref>`.
-- PostgreSQL TLS is enabled with `rejectUnauthorized:true` and a configured Supabase-provided PEM CA certificate.
-- The connection is checked for non-owner / NOINHERIT / NOBYPASSRLS rights and whitelisted read-only routines.
-- A real Supabase Auth bearer token is verified online and the corresponding `auth.sessions` row is checked on every request.
-- The allowed frontend origin is explicitly set. Never open on `0.0.0.0` unless the ingress terminates HTTPS.
+## Safety correction: old staging command is disabled
 
-## Required environment variable names (values never committed)
-`STAGING_DATABASE_URL` — **private**, restricted runtime database login only, no URL query overrides.
-`STAGING_POSTGRES_CA_PEM` — PEM CA downloaded securely from Supabase dashboard.
-`STAGING_SUPABASE_URL` — `https://<staging-project-ref>.supabase.co`.
-`STAGING_SUPABASE_PUBLISHABLE_KEY` — publishable key, not service_role.
-`STAGING_ALLOWED_ORIGIN` — exact HTTPS client staging origin.
-Optional: `STAGING_BIND_HOST` (default loopback), `STAGING_TLS_TERMINATED=true` for external TLS reverse proxy, `PORT` (default 8787).
+`node staging/server.mjs` / `cd staging && npm start` deliberately exits with code **1**.
+The former direct PostgreSQL gateway used actor-ID `SECURITY DEFINER` SQL and is
+not acceptable for client workloads. Do **not** restore it to make the demo work.
+The Codeedge AppDeploy navy dashboard/demo is a different runtime and is untouched.
 
-## Deployment process
-- Clone the exact PR #2 commit into an isolated, HTTPS-only staging environment with Node.js 22 and the repository backend folder intact.
-- Configure environment using backend-only secret storage; never paste connection strings or passwords into GitHub comments, CI logs or a browser frontend.
-- The committed `staging/package-lock.json` pins `pg@8.13.3` and its dependency integrity hashes. Install from repository root with `cd staging && npm ci --ignore-scripts --no-fund && npm audit --omit=dev --audit-level=high`. Start **only after** the restricted runtime credential, trusted provider and CA are configured: `npm start`. Never regenerate dependency versions as a deployment fallback.
-- No service should start without dedicated database LOGIN, trusted Auth configuration and TLS CA.
-- `GET /healthz` indicates only readiness; it is **not** proof of tenant access, revocation, or data correctness.
-- `GET /v1/workspaces` and `GET /v1/requests?workspaceId=...` require verified bearer identity and active membership.
-- No PUT/POST/DELETE and no client invitation, file/media or publishing routes.
+`backend/authenticated-read-gateway.mjs` is a source-only replacement **factory**,
+not a deployed service. Its `enableForSyntheticTesting: true` switch is a test
+mechanism, not a deployable security approval or a production feature flag. There
+is no permitted hosted Node startup that wires a real `checkAuthoritativeSession`
+provider, accepted RLS/grants and HTTPS secrets together.
 
-## Blockers
-The hosted `growth_starter_runtime` principal is still **NOLOGIN** with no credentials; real staging HTTPS ingress, database certificate, standalone service secret storage, Supabase Auth asymmetric signing configuration and actual user sessions must be set up and tested before live collaboration. Do not deploy a fake service with synthetic credentials.
+## Executable safe checks now
 
-## Manual hosted acceptance (never run with real credentials in public CI)
-- `node staging/hosted-acceptance.mjs` requires the following **secret-managed environment names**: `GS_ACCEPT_GATEWAY_URL`, `GS_ACCEPT_TOKEN_A`, `GS_ACCEPT_TOKEN_B`, `GS_ACCEPT_WORKSPACE_A`, `GS_ACCEPT_WORKSPACE_B`, `GS_ACCEPT_REQUEST_A`, `GS_ACCEPT_REQUEST_B`, `GS_ACCEPT_ALLOWED_ORIGIN`. Supply two independently authenticated, confirmed staging test accounts and two synthetic workspaces with identifiable fictional requests using an authorized ephemeral test fixture. Never use patient data.
-- The runner validates HTTPS, separate token subjects and session IDs, both foreign tenant denials, forged claims/signatures, wrong origin, read-only methods and unavailable media routes. It prints only check names/status/latency; no access tokens or response bodies.
-- It **does not** independently establish password/TLS quality, actual JWT key-rotation support, expired/revoked session behavior, database privileges, or cleanup. These require separate security-controller evidence. A mock unit-test pass does not constitute hosted acceptance.
-- On first failing status or unexpected cross-workspace data, stop; keep agency writes/media disabled and document the sanitized outcome.
+```bash
+node --test tests/*.test.mjs
+node --test tests/hosted-acceptance.test.mjs
+node --test tests/legacy-entrypoint.test.mjs
+# Disposable PostgreSQL only (never hosted):
+TEST_DATABASE_URL='postgres://gs_test:...@localhost:5432/gs_test' node --test --test-concurrency=1 tests/postgres/*.test.mjs
+```
 
-## Phase 2.5 review: CORS and privilege-drift hardening
-- Browsers send unauthenticated `OPTIONS` preflights before cross-origin bearer-token GETs. The gateway now allows only exact-origin, `GET` + `Authorization` preflights on the two read endpoints. No preflight authenticates a user, accesses SQL or grants writes.
-- Startup also checks the **reader role itself**, not just the network LOGIN. Unexpected direct table privileges, CREATE rights, LOGIN/SUPERUSER/BYPASSRLS and extra executable functions fail preflight before any server listener is opened.
-- No new migrations were applied; no role password was set and the existing `growth_starter_runtime` is still NOLOGIN.
-- The existing host acceptance runner remains manual-only. Do not call the historical AppDeploy QA sandbox a live Growth Starter staging gateway.
+The **read-only** `staging/hosted-catalog-preflight.sql` is suitable for an
+authorized SQL management session against the isolated Growth Starter project.
+It reports policies, limited privileges and legacy function EXECUTE exposure.
+It applies no changes. The disconnected hosted project currently has no actual
+RLS policies, authenticated users, workspaces or session provider deployment.
 
-## Exact owner/operator gates before real activation
-1. Select a specifically approved Node 22 HTTPS service and verify whether its cost is zero. It must keep backend secrets out of build artifacts, browser code and logs; require certificate-validated TLS for Supabase connections.
-2. Use that service's protected **one-time credential-entry channel** to establish a unique restricted PostgreSQL runtime password and rotate it; only then authorize changing `growth_starter_runtime` to LOGIN. Never use the administrative `postgres` or `service_role` credential. Validate privileges and separate Login/Reader grants from the host before enabling traffic.
-3. Inspect actual Supabase Auth signing keys (ES256/RS256), verified-email requirements, redirect allowlist and token lifetime. Create two **independent synthetic email-confirmed test users** via approved user-management configuration; never fake hosted user sessions.
-4. Seed two fictional workspaces and requests in isolated staging using an approved auditable script and a cleanup transaction. Run the existing HTTPS two-user runner and **independent** real session-revocation/expiry, forbidden database operations and cleanup checks; record status codes, deployed exact SHA and TLS evidence without passwords/tokens.
-5. Revisit the HIGH `SECURITY DEFINER` actor-parameter impersonation risk before enabling client invites, agency write routes, photos or any real clients. Keep current read-only gateway fail-closed if that risk cannot be independently resolved.
+## Exact owner-controlled activation gates
+
+1. **Owner approves:** isolated Growth Starter staging only, existing zero-cost
+   host if possible, confirmed pricing, protected Node 22 secret manager,
+   TLS termination, approved hostname and maintenance rollback. No production.
+2. **Reviewer approves:** independent security assessment of review-only
+   `db/drafts/0008_authenticated_read_rls_REVIEW_ONLY.sql`; backup and
+   rollback plan; private PostgREST schema exposure and column grants.
+   Never confuse RLS with JWT signature validation.
+3. **Owner approves synthetic Auth testing:** create **two independent fictional
+   confirmed-email users A and B**, plus separate member C for revocation
+   testing, each with their own real JWT and session ID. They must not carry
+   real patient data.
+4. **Trusted session provider:** implement a supported server-only
+   authoritative current-session lookup (including exact user/session binding,
+   expiry and revocation) independent of browser claims and untrusted
+   direct-PG actor-ID routines. `/auth/v1/user` alone does not guarantee
+   immediate logout invalidation. The Node gateway must fail at startup if the
+   reviewer-accepted provider, secrets or RLS verification are unavailable.
+5. **Under a separately approved change window:** apply reviewed RLS only to
+   isolated staging; verify least-privilege grants, database policies and
+   actual `auth.uid()` under signed per-user PostgREST requests. The current
+   `0008` file is a review draft, not permission to execute it.
+6. **Operator seeds fictional records only** using an approved auditable
+   procedure and runs actual HTTPS acceptance as described below.
+7. **Reviewer signs off:** confirm read/write isolation, membership and session
+   revocation, banned/expired tokens, direct SQL privilege probes, precise
+   deployment SHA, TLS evidence and cleanup.
+8. **Only afterward and with explicit approval:** retire legacy actor-ID
+   functions transactionally using `0007` and `0009`, route to the vetted
+   replacement; on failure go to maintenance/deny-all, **never re-GRANT the
+   vulnerable functions**. No agency writes, live SEO publishing, uploads or
+   patient data until separately accepted.
+
+## Manual real HTTPS acceptance — never run in public CI
+
+Use protected **operator-local environment variables**, not arguments or a
+GitHub issue/comment: `GS_ACCEPT_GATEWAY_URL`, `GS_ACCEPT_TOKEN_A`,
+`GS_ACCEPT_TOKEN_B`, `GS_ACCEPT_WORKSPACE_A`,
+`GS_ACCEPT_WORKSPACE_B`, `GS_ACCEPT_REQUEST_A`,
+`GS_ACCEPT_REQUEST_B`, `GS_ACCEPT_ALLOWED_ORIGIN`.
+The workspace IDs must exactly equal `ws_<token.subject>` for the owner users
+to satisfy the current PostgreSQL schema. Tokens must be genuinely signed by
+the connected staging Supabase Auth service.
+
+```bash
+# Baseline, both own/foreign directions + invalid signature/role/CORS/write:
+GS_ACCEPT_PHASE=baseline node staging/hosted-acceptance.mjs
+
+# Operator FIRST independently revokes A's actual session, keeps B active and
+# confirms original A token remains valid by exp but invalid by revocation:
+GS_ACCEPT_PHASE=session-revoked-a node staging/hosted-acceptance.mjs
+
+# Operator FIRST records member C's allowed read, revokes membership in
+# isolated staging and verifies the same unexpired original member-C token:
+GS_ACCEPT_PHASE=member-revoked-c node staging/hosted-acceptance.mjs
+```
+
+The member revocation stage additionally requires `GS_ACCEPT_TOKEN_MEMBER_C`.
+Do not set it to either owner token. These stages do **not** modify data or
+perform user/session revocation; an authorized operator must supply actual
+transition evidence separately. A 401 after JWT expiry is not immediate
+revocation evidence. Record only check names, status, duration and SHA, never
+tokens or client details.
+
+**Failure behavior:** stop acceptance, block gateway activation, and use
+maintenance mode. Do not silently re-enable legacy HTTP/SQL privileges.
+See `docs/PHASE3-2-CUTOVER-RUNBOOK.md` and `docs/PHASE3-3-OPERATIONS.md`.

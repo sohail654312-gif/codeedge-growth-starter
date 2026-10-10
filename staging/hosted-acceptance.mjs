@@ -207,8 +207,8 @@ if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
     const result=await runner(config,{...(mode==='member-revoked-c'?{
       memberToken:process.env.GS_ACCEPT_TOKEN_MEMBER_C}:{}),report:x=>process.stdout.write(
       x.check+' HTTP '+x.status+' ('+(x.elapsedMs??'n/a')+' ms)\n')});
-    process.stdout.write(result.passed+' hosted HTTP checks passed. This is NOT complete Phase 2.4 acceptance.\n');
-    process.stdout.write('Still requires independent expiry/revocation, SQL login and cleanup evidence.\n');
+    process.stdout.write(result.passed+' hosted HTTP checks passed in '+mode+' stage; NOT complete Phase 3.3C acceptance.\n');
+    process.stdout.write('Operator must verify trusted session source, live PostgreSQL grants, synthetic cleanup and reviewer sign-off separately.\n');
   }catch{
     // Never expose token, URL containing credentials, or response payload.
     process.stderr.write('Hosted acceptance failed or is not configured; no acceptance claim.\n');

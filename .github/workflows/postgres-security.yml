@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 6
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:17-alpine
         env:
           POSTGRES_USER: gs_test
           POSTGRES_PASSWORD: ephemeral_qa_only

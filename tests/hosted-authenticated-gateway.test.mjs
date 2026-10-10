@@ -14,7 +14,7 @@ test('hosted gateway construction rejects synthetic true callback and unverified
   projectUrl,publishableKey:'sb_publishable_contract_only_fixture',allowedOrigin
  }),/not approved/);
 });
-test('only security-readback-branded PostgreSQL authority enables hosted construction path',async()=>{
+test('even catalog-verified synthetic session authority cannot reactivate the direct-Data-API hosted gateway',async()=>{
  const flags={actor:'growth_starter_session_checker',login:'growth_starter_session_checker',
   rolcanlogin:true,rolsuper:false,rolbypassrls:false,rolinherit:false,
   rolcreaterole:false,rolcreatedb:false,rolreplication:false,can_set_authenticated:false,
@@ -35,11 +35,8 @@ test('only security-readback-branded PostgreSQL authority enables hosted constru
   },release(){}
  })};
  const sessionAuthority=await createPgSessionAuthority({pool});
- const g=createHostedAuthenticatedReadGateway({
+ assert.throws(()=>createHostedAuthenticatedReadGateway({
   sessionAuthority,projectUrl,publishableKey:'sb_publishable_contract_only_fixture',
   allowedOrigin
- });
- assert.equal(typeof g.createServer,'function');
- assert.equal(typeof g.handler,'function');
- assert.equal('enableForSyntheticTesting' in g,false);
+ }),/not approved/);
 });

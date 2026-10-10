@@ -1,4 +1,4 @@
-import {isVerifiedPgSessionAuthority} from './pg-session-authority.mjs';
+import {isSyntheticPrivateReadContract,PrivateReadDenied} from './private-read-adapter.mjs';
 import {createServer} from 'node:http';
 import {createPostgrestReadBoundary,PostgrestBoundaryError} from './postgrest-read-boundary.mjs';
 import {createTrustedSessionGate} from './trusted-session-gate.mjs';
@@ -39,13 +39,18 @@ function permittedSearch(url,allowed){
  */
 function buildAuthenticatedGateway({
   projectUrl,publishableKey,allowedOrigin,checkAuthoritativeSession,
-  fetchImpl=globalThis.fetch,now=()=>Date.now()
+  fetchImpl=globalThis.fetch,now=()=>Date.now(),privateReader=null
 }={}){
   const allowed=originOf(allowedOrigin);
-  const session=createTrustedSessionGate({projectUrl,checkAuthoritativeSession,now});
-  const reader=createPostgrestReadBoundary({
-    projectUrl,publishableKey,fetchImpl,verifyCurrentSession:session.verifyCurrentSession
-  });
+  // Only the explicit synthetic-only constructor may inject a private reader.
+  // Hosted construction is disabled until a non-bypassable Data API boundary
+  // and independently accepted user-to-database-principal binding exist.
+  const reader=privateReader ?? (()=>{
+    const session=createTrustedSessionGate({projectUrl,checkAuthoritativeSession,now});
+    return createPostgrestReadBoundary({
+      projectUrl,publishableKey,fetchImpl,verifyCurrentSession:session.verifyCurrentSession
+    });
+  })();
   const handler=async(req,res)=>{
     const origin=req.headers.origin;
     const cors=typeof origin==='string' && origin===allowed?allowed:null;
@@ -94,7 +99,7 @@ function buildAuthenticatedGateway({
       const result=await reader.listRequests(bearer,workspaceId,limit,page*limit);
       return respond(res,200,{...result,page,nextPage:result.items.length===limit && page<19?page+1:null},cors);
     }catch(error){
-      if(error instanceof PostgrestBoundaryError){
+      if(error instanceof PostgrestBoundaryError || error instanceof PrivateReadDenied){
         const status=[400,401,403].includes(error.status)?error.status:503;
         return respond(res,status,{error:status===401?'Authentication required.':
           status===403?'Workspace access denied.':status===400?'Invalid request.':'Read boundary unavailable.'},cors);
@@ -112,13 +117,25 @@ export function createAuthenticatedReadGateway({enableForSyntheticTesting=false,
 }
 
 /**
- * Separate hosted construction path. The opaque authority brand is minted
- * only after PostgreSQL login/privilege/RLS/revocation checks. No testing
- * flag can enable this route. The staging Node process also requires a
- * loopback-only HTTPS reverse-proxy boundary.
+ * Phase 3.11: real HTTP wiring of the synthetic-only private SQL contract.
+ * This exposes no hosted factory, database credentials, or PostgREST access.
+ * The synthetic reader brand cannot be supplied by an arbitrary plain object.
  */
-export function createHostedAuthenticatedReadGateway({sessionAuthority,...options}={}){
-  if(!isVerifiedPgSessionAuthority(sessionAuthority))fail();
-  return buildAuthenticatedGateway({...options,
-    checkAuthoritativeSession:sessionAuthority.checkAuthoritativeSession});
+export function createSyntheticPrivateSqlReadGateway({
+  fictionalTestOnly=false,reader,allowedOrigin
+}={}){
+  if(fictionalTestOnly!==true || !isSyntheticPrivateReadContract(reader))fail();
+  return buildAuthenticatedGateway({allowedOrigin,privateReader:reader});
+}
+
+/**
+ * Phase 3.11 permanent cutover gate: the previous hosted factory could
+ * construct a PostgREST reader after an otherwise valid Auth checker
+ * preflight. A revoked bearer could bypass the Node gateway by calling
+ * exposed /rest/v1 tables directly, so that path is no longer activatable.
+ * A future hosted factory requires independent Data API readback/lockdown,
+ * provider current-session authority and DB-enforced tenant identity binding.
+ */
+export function createHostedAuthenticatedReadGateway(){
+  fail();
 }

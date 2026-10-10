@@ -5,6 +5,10 @@
  * independently audited DB enforcement boundary have been approved.
  * No connection string, PostgREST request or legacy SECURITY DEFINER calls.
  */
+const syntheticContracts=new WeakSet();
+export function isSyntheticPrivateReadContract(value){
+  return !!value && typeof value==='object' && syntheticContracts.has(value);
+}
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const WS=/^ws_[A-Za-z0-9_-]{8,128}$/;
 const ROLE=new Set(['owner','agency_admin','staff','client']);
@@ -113,7 +117,7 @@ export function createPrivateReadContract({
     if(unique.size!==rows.length)deny();
     return rows;
   }
-  return Object.freeze({
+  const contract=Object.freeze({
     async listWorkspaces(authorization) {
       const userId=await actor(authorization);
       return Object.freeze({workspaces:await allowed(userId)});
@@ -130,6 +134,8 @@ export function createPrivateReadContract({
       return Object.freeze({workspaceId,items:rows});
     }
   });
+  syntheticContracts.add(contract);
+  return contract;
 }
 /** A hosted adapter is intentionally unavailable; do not replace this gate with an environment flag. */
 export function createHostedPrivateReadAdapter(){deny();}

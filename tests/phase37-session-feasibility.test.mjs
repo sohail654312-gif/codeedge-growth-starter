@@ -15,11 +15,11 @@ import {createTrustedSessionGate} from '../backend/trusted-session-gate.mjs';
 const A='329d2e94-f1f0-4cd9-8bfa-0983be1434ab';
 const S='539d2e94-f1f0-4cd9-8bfa-0983be1434ab';
 const BAD='639d2e94-f1f0-4cd9-8bfa-0983be1434ab';
-const URL='https://fictional-phase37.supabase.co';
+const PROJECT='https://fictional-phase37.supabase.co';
 const NOW=1791570000;
 const encode=v=>Buffer.from(JSON.stringify(v)).toString('base64url');
 const token=()=>[encode({alg:'ES256',kid:'synthetic-only'}),encode({
-  iss:URL+'/auth/v1',aud:'authenticated',role:'authenticated',sub:A,
+  iss:PROJECT+'/auth/v1',aud:'authenticated',role:'authenticated',sub:A,
   session_id:S,iat:NOW-60,exp:NOW+300
 }),Buffer.alloc(64,9).toString('base64url')].join('.');
 
@@ -71,22 +71,22 @@ test('NOLOGIN session checker remains blocked even if column and schema privileg
 test('auth /user HTTP 200 alone cannot authorise a revoked still-unexpired bearer',async()=>{
   const calls=[];
   const reader=createPostgrestReadBoundary({
-    projectUrl:URL,publishableKey:'sb_publishable_synthetic_phase37_only',
+    projectUrl:PROJECT,publishableKey:'sb_publishable_synthetic_phase37_only',
     verifyCurrentSession:async()=>false,
     fetchImpl:async (url,opts)=>{
-      calls.push(new URL(url).pathname);
-      assert.equal(opts.headers.authorization,'Bearer '+token());
+      calls.push({path:new URL(url).pathname,authorization:opts.headers.authorization});
       return{status:200,json:async()=>({
         id:A,email:'fictional@example.invalid',email_confirmed_at:'2026-10-10T00:00:00Z'
       })};
     }
   });
   await assert.rejects(reader.listWorkspaces('Bearer '+token()),e=>e.status===401);
-  assert.deepEqual(calls,['/auth/v1/user']); // not one protected Data API read
+  assert.deepEqual(calls.map(x=>x.path),['/auth/v1/user']); // not one protected Data API read
+  assert.equal(calls[0].authorization,'Bearer '+token());
 });
 test('trusted-session callback requires matching user ID, session ID and active evidence',async()=>{
   const create=fn=>createTrustedSessionGate({
-    projectUrl:URL,now:()=>NOW*1000,checkAuthoritativeSession:fn});
+    projectUrl:PROJECT,now:()=>NOW*1000,checkAuthoritativeSession:fn});
   for(const result of [
     {active:true,userId:A,sessionId:BAD},
     {active:true,userId:BAD,sessionId:S},

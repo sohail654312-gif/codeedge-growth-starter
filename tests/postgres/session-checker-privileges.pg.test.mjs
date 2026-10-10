@@ -14,9 +14,9 @@ test('review-only session role can check auth session membership, not read unrel
   await c.query('BEGIN');
   try{
    await c.query(readFileSync('db/drafts/0010_session_checker_minimal_auth_columns_REVIEW_ONLY.sql','utf8'));
-   const a='329d2e94-f1f0-4cd9-8bfa-0983be1434ab',sid='539d2e94-f1f0-4cd9-8bfa-0983be1434ab';
-   await c.query('INSERT INTO auth.users(id,email) VALUES($1,$2)',[a,'fictional@example.invalid']);
-   await c.query('INSERT INTO auth.sessions(id,user_id) VALUES($1,$2)',[sid,a]);
+   const a='f39d2e94-f1f0-4cd9-8bfa-0983be1434ab',sid='f49d2e94-f1f0-4cd9-8bfa-0983be1434ab';
+   await c.query('INSERT INTO auth.users(id,email) VALUES($1,$2) ON CONFLICT (id) DO NOTHING',[a,'fictional@example.invalid']);
+   await c.query('INSERT INTO auth.sessions(id,user_id) VALUES($1,$2) ON CONFLICT (id) DO NOTHING',[sid,a]);
    await c.query('SAVEPOINT reader_scope');
    try{
     await c.query('SET LOCAL ROLE growth_starter_session_checker');

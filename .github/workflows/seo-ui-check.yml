@@ -1,0 +1,76 @@
+name: Growth Starter offline SEO UI typecheck
+on:
+  push:
+    branches: [engineering/phase2-core-security]
+    paths:
+      - 'src/SeoGrowthManager.tsx'
+      - 'src/PremiumContentPanel.tsx'
+      - 'src/WebsiteProposalDesk.tsx'
+      - 'src/website-proposals.css'
+      - 'backend/website-proposals.*'
+      - 'tests/website-proposals.test.mjs'
+      - 'src/premium-content.css'
+      - 'backend/premium-content-intelligence.*'
+      - 'backend/premium-content-demo.mjs'
+      - 'tests/premium-content-intelligence.test.mjs'
+      - 'src/SearchPerformancePanel.tsx'
+      - 'src/seo-search-data.css'
+      - 'backend/search-*.mjs'
+      - 'backend/search-*.d.mts'
+      - 'backend/seo-search-data.*'
+      - 'tests/seo-search-data.test.mjs'
+      - 'src/seo-growth.css'
+      - 'backend/seo-*.mjs'
+      - 'backend/seo-*.d.mts'
+      - 'tsconfig.seo.json'
+      - '.github/workflows/seo-ui-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/SeoGrowthManager.tsx'
+      - 'src/PremiumContentPanel.tsx'
+      - 'src/WebsiteProposalDesk.tsx'
+      - 'src/website-proposals.css'
+      - 'backend/website-proposals.*'
+      - 'tests/website-proposals.test.mjs'
+      - 'src/premium-content.css'
+      - 'backend/premium-content-intelligence.*'
+      - 'backend/premium-content-demo.mjs'
+      - 'tests/premium-content-intelligence.test.mjs'
+      - 'src/SearchPerformancePanel.tsx'
+      - 'src/seo-search-data.css'
+      - 'backend/search-*.mjs'
+      - 'backend/search-*.d.mts'
+      - 'backend/seo-search-data.*'
+      - 'tests/seo-search-data.test.mjs'
+      - 'src/seo-growth.css'
+      - 'backend/seo-*.mjs'
+      - 'backend/seo-*.d.mts'
+      - 'tsconfig.seo.json'
+      - '.github/workflows/seo-ui-check.yml'
+permissions:
+  contents: read
+jobs:
+  seo-ui-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned frontend framework and TS dependencies from package manifest
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-fund --no-audit
+      - name: Typecheck SEO Growth Manager UI in isolation
+        run: npx tsc --project tsconfig.seo.json --noEmit
+      - name: Validate offline SEO domain and fixture scripts
+        run: |
+          node --check backend/seo-growth.mjs
+          node --check backend/seo-fixtures.mjs
+          node --check backend/seo-demo.mjs
+          node --check backend/seo-search-data.mjs
+          node --check backend/search-demo.mjs
+          node --check backend/premium-content-intelligence.mjs
+          node --check backend/premium-content-demo.mjs
+          node --check backend/website-proposals.mjs
+          node --test tests/seo-growth.test.mjs tests/seo-search-data.test.mjs tests/premium-content-intelligence.test.mjs tests/website-proposals.test.mjs

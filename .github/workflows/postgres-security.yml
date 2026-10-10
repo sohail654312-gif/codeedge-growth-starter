@@ -1,0 +1,41 @@
+name: Growth Starter disposable PostgreSQL security
+on:
+  push:
+    branches: [engineering/phase2-core-security]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  postgres-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: gs_test
+          POSTGRES_PASSWORD: ephemeral_qa_only
+          POSTGRES_DB: gs_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gs_test -d gs_test"
+          --health-interval 5s --health-timeout 5s --health-retries 8
+    env:
+      TEST_DATABASE_URL: postgres://gs_test:ephemeral_qa_only@localhost:5432/gs_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned test-only PostgreSQL driver
+        run: npm install --no-save --no-package-lock --ignore-scripts pg@8.13.3 sharp@0.33.5
+      - name: Syntax check PostgreSQL and identity modules
+        run: |
+          node --check backend/postgres-store.mjs
+          node --check backend/verified-identity.mjs
+          node --check backend/media-gate.mjs
+          node --check backend/image-inspector.mjs
+      - name: Real database transactions and signed synthetic HTTP sessions
+        run: node --test --test-concurrency=1 tests/postgres/*.test.mjs

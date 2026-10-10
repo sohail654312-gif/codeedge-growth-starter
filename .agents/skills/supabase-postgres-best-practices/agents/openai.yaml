@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL Best Practices — Growth Starter"
+  short_description: "Review Postgres RLS, grants, indexes and SQL performance"
+  default_prompt: "Use $supabase-postgres-best-practices to review Growth Starter's existing security design on the current frozen SHA, read-only, with evidence and no changes."
+policy:
+  allow_implicit_invocation: false

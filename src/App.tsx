@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { auth, api } from '@appdeploy/client';
 import ClinicOverview from './ClinicOverview';
+import WorkProgress from './WorkProgress';
+import SeoGrowthManager from './SeoGrowthManager';
+import {WebsitePage,AgencyDesk} from './ServicePages';
 import {
   Activity,
   ArrowRight,
@@ -72,15 +75,20 @@ type Overview = {
   enquiries: Enquiry[];
   requests: Work[];
   assets: Asset[];
+  role?: 'owner' | 'agency_admin' | 'staff' | 'client';
+  workspaceId?: string;
 };
 type Tab =
   | 'Overview'
+  | 'Website'
+  | 'Agency desk'
   | 'Enquiries'
   | 'Content studio'
   | 'Google & SEO'
   | 'Media library'
   | 'Settings';
 type Modal = 'lead' | 'request' | 'profile' | null;
+const emptyOverview: Overview = { profile: null, enquiries: [], requests: [], assets: [] };
 const sample: Overview = {
   profile: {
     name: 'Dr Ikram Wazir',
@@ -161,10 +169,12 @@ const sample: Overview = {
 };
 const nav: { name: Tab; icon: typeof Activity }[] = [
   { name: 'Overview', icon: LayoutDashboard },
+  { name: 'Website', icon: Globe2 },
   { name: 'Enquiries', icon: MessageCircle },
   { name: 'Content studio', icon: WandSparkles },
   { name: 'Google & SEO', icon: Globe2 },
   { name: 'Media library', icon: Camera },
+  { name: 'Agency desk', icon: Users },
   { name: 'Settings', icon: Settings },
 ];
 const datestr = (value: string) =>
@@ -196,6 +206,7 @@ function App() {
   );
   const [data, setData] = useState<Overview>(sample);
   const [busy, setBusy] = useState(false);
+  const [loadingWorkspace, setLoadingWorkspace] = useState(false);
   const [notice, setNotice] = useState('');
   const [modal, setModal] = useState<Modal>(null);
   const [lead, setLead] = useState({
@@ -217,6 +228,7 @@ function App() {
   });
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [mediaConfirmed, setMediaConfirmed] = useState(false);
 
   const flash = (message: string) => {
     setNotice(message);
@@ -233,7 +245,10 @@ function App() {
       try {
         const current = await auth.getUser();
         if (!active || !current) return;
+        setLoadingWorkspace(true);
         setUser({ name: current.name, email: current.email });
+        // Clear illustrative records before private mode, even on an API error.
+        setData(emptyOverview);
         setDemo(false);
         const response = await api.get('/api/overview');
         if (active) {
@@ -243,6 +258,8 @@ function App() {
         }
       } catch {
         if (active) setNotice('Could not load your workspace. Try refreshing.');
+      } finally {
+        if (active) setLoadingWorkspace(false);
       }
     }
     initialise();
@@ -255,7 +272,9 @@ function App() {
     setNotice('');
     try {
       const { user: current } = await auth.signIn();
+      setLoadingWorkspace(true);
       setUser({ name: current.name, email: current.email });
+      setData(emptyOverview);
       setDemo(false);
       await refresh();
     } catch (e) {
@@ -267,6 +286,7 @@ function App() {
             : 'Sign-in was not completed.'
         );
     } finally {
+      setLoadingWorkspace(false);
       setBusy(false);
     }
   }
@@ -342,6 +362,24 @@ function App() {
       setBusy(false);
     }
   }
+  async function requestCorrection(original: Work, notes: string) {
+    if (demo) { flash('Sign in to request changes.'); return false; }
+    const safeNotes = notes.trim();
+    if (safeNotes.length < 4 || safeNotes.length > 500) { flash('Please describe the change in 4 to 500 characters.'); return false; }
+    try {
+      await api.post('/api/requests', {
+        title: ('Change request: ' + original.title).slice(0, 100),
+        kind: original.kind,
+        notes: safeNotes,
+      });
+      await refresh();
+      flash('Your correction was added as a separate tracked request.');
+      return true;
+    } catch {
+      flash('Could not submit the correction. Please try again.');
+      return false;
+    }
+  }
   async function updateStatus(id: string, status: string) {
     if (demo) {
       flash('Sign in to update enquiries.');
@@ -357,6 +395,7 @@ function App() {
   }
   async function uploadImage(file?: File) {
     if (!file) return;
+    if(!mediaConfirmed) { flash('Confirm that you own the media rights and it contains no patient information.'); return; }
     if (demo) {
       flash('Sign in to upload images.');
       return;
@@ -382,9 +421,11 @@ function App() {
         filename: file.name,
         mime: file.type,
         content,
+        rightsDeclared: true,
       });
       await refresh();
-      flash('Image uploaded to your private media library.');
+      flash('Image saved privately. Preview access stays locked until consent and safety review.');
+      setMediaConfirmed(false);
     } catch {
       flash('Upload failed. Please try a smaller image.');
     } finally {
@@ -432,6 +473,7 @@ function App() {
       tone: 'orange',
     },
   ];
+  const visibleNav = nav.filter(item => item.name !== 'Agency desk' || (!demo && (data.role === 'agency_admin' || data.role === 'staff')));
   const rows = enquiries.filter(e =>
     [e.name, e.service, e.channel]
       .join(' ')
@@ -454,7 +496,7 @@ function App() {
         </div>
         <div className="nav-heading">WORKSPACE</div>
         <nav>
-          {nav.map(({ name, icon: Icon }) => (
+          {visibleNav.map(({ name, icon: Icon }) => (
             <button
               key={name}
               className={'nav-item ' + (tab === name ? 'selected' : '')}
@@ -548,7 +590,7 @@ function App() {
           </div>
         </div>
         <div className="mobile-tabs">
-          {nav.map(({ name, icon: Icon }) => (
+          {visibleNav.map(({ name, icon: Icon }) => (
             <button
               key={name}
               className={name === tab ? 'active' : ''}
@@ -568,6 +610,7 @@ function App() {
           </div>
         )}
         <div className="page">
+          {loadingWorkspace && !demo && <div className="workspace-loading" role="status" aria-live="polite">Loading your private workspace…</div>}
           {tab === 'Overview' && (
             <ClinicOverview
               demo={demo}
@@ -581,6 +624,19 @@ function App() {
               openRequest={() => guard('request')}
               goTo={setTab}
             />
+          )}
+          {tab === 'Website' && (
+            <WebsitePage
+              business={currentName}
+              website={data.profile?.website || ''}
+              requests={requests}
+              demo={demo}
+              onWebsiteEdit={() => guard('profile')}
+              onRequest={() => {setWork({title:'',kind:'Website update',notes:''});guard('request');}}
+            />
+          )}
+          {tab === 'Agency desk' && !demo && (data.role === 'agency_admin' || data.role === 'staff') && (
+            <AgencyDesk role={data.role} requests={requests} assets={data.assets}/>
           )}
           {tab === 'Enquiries' && (
             <>
@@ -720,6 +776,13 @@ function App() {
                   </div>
                 </div>
               </div>
+              <WorkProgress
+                requests={requests}
+                demo={demo}
+                role={data.role}
+                onNewRequest={() => guard('request')}
+                onCorrection={requestCorrection}
+              />
               <div className="panel content-board">
                 <div className="panel-header">
                   <div>
@@ -760,68 +823,10 @@ function App() {
             <>
               <PageHeading
                 eyebrow="SEARCH VISIBILITY"
-                title="Be found where it matters."
-                desc="Your website, local SEO and answer-engine visibility in one clear plan."
+                title="SEO Growth Manager"
+                desc="Research keywords, review webpage evidence and plan useful answers without invented marketing metrics."
               />
-              <div className="seo-banner">
-                <Globe2 size={32} />
-                <div>
-                  <strong>Local growth, without the jargon</strong>
-                  <p>
-                    Codeedge works on the website, Google Business Profile,
-                    relevant service pages and helpful answers. Connected data
-                    comes in later phases.
-                  </p>
-                </div>
-              </div>
-              <div className="seo-grid">
-                {[
-                  {
-                    icon: Globe2,
-                    title: 'Website presence',
-                    desc: 'A fast, mobile-friendly site built to convert visitors into enquiries.',
-                    badge: 'STEP 01',
-                  },
-                  {
-                    icon: Search,
-                    title: 'Google & local SEO',
-                    desc: 'Clear services, local search pages, helpful information and review strategy.',
-                    badge: 'STEP 02',
-                  },
-                  {
-                    icon: Sparkles,
-                    title: 'AEO readiness',
-                    desc: 'Answer real customer questions with structured, useful content.',
-                    badge: 'STEP 03',
-                  },
-                  {
-                    icon: TrendingUp,
-                    title: 'Measure growth',
-                    desc: 'Track source enquiries and bookings; connect verified analytics later.',
-                    badge: 'STEP 04',
-                  },
-                ].map(item => (
-                  <div className="seo-card" key={item.title}>
-                    <div className="seo-icon">
-                      <item.icon size={22} />
-                    </div>
-                    <small>{item.badge}</small>
-                    <h3>{item.title}</h3>
-                    <p>{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="tip-line">
-                <ShieldCheck size={17} /> Google rankings, views, and SEO
-                performance are not connected to this preview. No live figures
-                are claimed.
-              </div>
-              <button
-                className="primary-button"
-                onClick={() => guard('request')}
-              >
-                Request an SEO task <ArrowRight size={16} />
-              </button>
+              <SeoGrowthManager demo={demo}/>
             </>
           )}
           {tab === 'Media library' && (
@@ -840,13 +845,18 @@ function App() {
                   Upload PNG, JPG or WebP images up to 3 MB each. Video uploads
                   are planned for a later phase.
                 </p>
+                <label className="media-consent-check">
+                  <input type="checkbox" checked={mediaConfirmed}
+                    onChange={e => setMediaConfirmed(e.target.checked)} />
+                  <span>I confirm I have permission to share these business images and they contain no patient or medical data.</span>
+                </label>
                 <label className="primary-button upload-control">
                   <CloudUpload size={17} />
                   {uploading ? 'Uploading...' : 'Choose a photo'}
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
-                    disabled={uploading}
+                    disabled={uploading || !mediaConfirmed}
                     onChange={e => {
                       void uploadImage(e.target.files?.[0]);
                       e.target.value = '';
@@ -861,7 +871,12 @@ function App() {
                 <div className="assets-grid">
                   {data.assets.map(a => (
                     <div className="asset-tile" key={a.id}>
-                      <img src={a.url} alt={a.filename} />
+                      {a.url ? <img src={a.url} alt={a.filename} loading="lazy" /> : (
+                        <div className="locked-media" role="status">
+                          <LockKeyhole size={20} />
+                          <span>Awaiting consent and security review</span>
+                        </div>
+                      )}
                       <strong title={a.filename}>{a.filename}</strong>
                       <small>{datestr(a.createdAt)}</small>
                     </div>

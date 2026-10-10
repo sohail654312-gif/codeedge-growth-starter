@@ -1,0 +1,6 @@
+interface:
+  display_name: "AI SEO — Growth Starter"
+  short_description: "SEO, GEO and AEO guidance with Codeedge safety rules"
+  default_prompt: "Use $ai-seo to review Growth Starter demo SEO/GEO/AEO content in read-only mode and provide sourced recommendations."
+policy:
+  allow_implicit_invocation: false

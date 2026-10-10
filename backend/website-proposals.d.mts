@@ -1,0 +1,21 @@
+import type {SeoReport} from './seo-growth.mjs';
+import type {PremiumPlan} from './premium-content-intelligence.mjs';
+export type WebsiteProposal={id:string;workspaceId:string;url:string;type:string;priority:string;businessObjective:string;
+ before:{source:string;title:string|null;description:string|null;heading:string|null};
+ after:{title:string;description:string;heading:string;sections:Array<{heading:string;draft:string;verify:string[]}>};
+ provenance:{source:string;reference:string|null;measuredKeywordDemand:null;importedSearchObservationStatus:string};
+ review:{state:'proposal_not_submitted';needsHumanFactCheck:true;verifiedActor:null;approval:null;completionEvidence:null;revision:number;localReviewNote?:string};
+ executable:false};
+export type WebsiteProposalPackage={version:'codeedge.website-proposals.v1';workspaceId:string;businessWebsite:string;
+ evidenceType:string;sourceReport:string;sourceStrategy:string;proposals:WebsiteProposal[];limitations:string[];
+ externalActions:{read:false;write:false;publish:false;notify:false}};
+export const PROPOSAL_BOUNDARY:Record<string,unknown>;
+export const CONTENT_GENERATION_PROVIDER_CONTRACT:Record<string,unknown>;
+export function prepareWebsiteImprovementProposals(input:{premiumPlan:PremiumPlan;seoReport:SeoReport}):WebsiteProposalPackage;
+export function reviseWebsiteProposalOffline(input:{proposal:WebsiteProposal;workspaceId:string;expectedRevision:number;after:{title:string;description:string;heading:string};reviewNote?:string}):WebsiteProposal;
+export function createDisabledWebsiteActionAdapter():Record<string,unknown>;
+export function createOfflineContentGenerationPort():{
+ mode:'deterministic_offline';capabilities:Record<string,unknown>;
+ propose(input:{premiumPlan:PremiumPlan;seoReport:SeoReport}):Promise<WebsiteProposalPackage&{provider:string;humanReviewRequired:true}>;
+ connect():never;publish():never;store():never;
+};

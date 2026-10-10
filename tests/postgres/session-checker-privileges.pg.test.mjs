@@ -13,6 +13,7 @@ test('review-only session role can check auth session membership, not read unrel
   await c.query('CREATE SCHEMA IF NOT EXISTS growth_starter');
   await c.query('BEGIN');
   try{
+   await c.query('ALTER TABLE auth.sessions ADD COLUMN IF NOT EXISTS gs_test_private inet');
    await c.query(readFileSync('db/drafts/0010_session_checker_minimal_auth_columns_REVIEW_ONLY.sql','utf8'));
    const a='f39d2e94-f1f0-4cd9-8bfa-0983be1434ab',sid='f49d2e94-f1f0-4cd9-8bfa-0983be1434ab';
    await c.query('INSERT INTO auth.users(id,email) VALUES($1,$2) ON CONFLICT (id) DO NOTHING',[a,'fictional@example.invalid']);
@@ -26,7 +27,7 @@ test('review-only session role can check auth session membership, not read unrel
     await assert.rejects(c.query('SELECT email FROM auth.users'),e=>e.code==='42501');
     await c.query('ROLLBACK TO SAVEPOINT denied_sensitive');await c.query('RELEASE SAVEPOINT denied_sensitive');
     await c.query('SAVEPOINT denied_session_ip');
-    await assert.rejects(c.query('SELECT ip FROM auth.sessions'),e=>e.code==='42501');
+    await assert.rejects(c.query('SELECT gs_test_private FROM auth.sessions'),e=>e.code==='42501');
     await c.query('ROLLBACK TO SAVEPOINT denied_session_ip');await c.query('RELEASE SAVEPOINT denied_session_ip');
     await c.query('SAVEPOINT denied_write');
     await assert.rejects(c.query('DELETE FROM auth.sessions'),e=>e.code==='25006'||e.code==='42501');

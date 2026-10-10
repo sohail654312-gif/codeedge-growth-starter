@@ -1,6 +1,6 @@
 # CODEEDGE GROWTH STARTER — PHASE 3.8 PRIVATE DATA ACCESS ACCEPTANCE
 
-**Mode:** source-only, manual single writer, isolated fictional tests. Existing PR #2 remains **DRAFT**; branch \`engineering/phase2-core-security\`. **Starting exact HEAD:** \`dc35ad04c22229b1e4187f552141758c83fd3637\`.
+**Mode:** source-only adapter with fictional tests and disposable PostgreSQL execution tests, manual single writer, no hosted writes. Existing PR #2 remains **DRAFT**; branch \`engineering/phase2-core-security\`. **Starting exact HEAD:** \`dc35ad04c22229b1e4187f552141758c83fd3637\`.
 
 ## A. Baseline
 Starting four GitHub Action runs, all completed successfully against that exact SHA:
@@ -19,6 +19,8 @@ A (minimal auth.sessions lookup): conditional design only. Checker cannot LOGIN 
 ## C. Engineering completed (source, not hosted)
 - \`backend/private-read-adapter.mjs\`: fixed parameterised read-only SQL against exactly \`growth_starter.workspaces\`, \`memberships\`, \`work_requests\`, with active owner/member restrictions on queries, bounded maximum 25 workspaces, maximum 50 request records/page and offset 950; projection/row-shape checks; per-operation verified identity and exact current-session proof in injected fictional authority; no actor-ID input, dynamic table/column names, PostgREST, role switch or old SECURITY DEFINER fallbacks.
 - \`tests/phase38-private-read-adapter.test.mjs\`: independent fictional A/B/C tests of allowed/denied, revocation, unavailable providers, injection, grants, rows and direct-API architectural conflict.
+- \`tests/postgres/phase38-private-read.pg.test.mjs\`: real SQL execution using fictional data in existing disposable PostgreSQL CI. This tests TEXT-column compatibility, active membership/owner binding, request visibility, revocation, safe timestamp projection, SQL parameters and restricted-role denial. This is NOT accepted database-layer RLS or live JWT evidence.
+- Read-only hosted schema review confirmed workspace owner and membership user IDs are TEXT, not UUID columns. Verified JWT subject UUID is therefore passed to SQL strictly as a TEXT parameter, without weakening server-side identity validation.
 - The contract requires \`fictionalTestOnly: true\`; \`createHostedPrivateReadAdapter\` always fails closed. Existing \`staging/accepted-server.mjs\` is NOT rewired or deployed.
 
 **Important:** The private SQL WHERE clauses are app-layer safeguards, not proof of PostgreSQL tenant-level RLS. A shared DB login without authenticated per-user RLS identity could query data beyond a tenant if compromised; existing \`auth.uid()\` policies cannot be assumed valid for this login. **Do not enable a real connection or create LOGIN.** Required DB acceptance is an independent provider-vetted, tenant-isolated SQL privilege/RLS security model with disposable adversarial tests and a fresh exact PG17 policy snapshot. No authenticated user GUC or service-role shortcut is acceptable.

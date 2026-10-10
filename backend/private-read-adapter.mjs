@@ -38,21 +38,24 @@ function validRequest(row,ws) {
 export const PRIVATE_READ_SQL=Object.freeze({
   workspaces:[
     'SELECT w.id AS workspace_id,',
-    " CASE WHEN w.owner_user_id = $1::uuid THEN 'owner' ELSE m.role END AS role",
+    " CASE WHEN w.owner_user_id = $1::text THEN 'owner' ELSE m.role END AS role",
     'FROM growth_starter.workspaces AS w',
     'LEFT JOIN growth_starter.memberships AS m',
-    " ON m.workspace_id = w.id AND m.user_id = $1::uuid AND m.state = 'active'",
-    "WHERE w.state = 'active' AND (w.owner_user_id = $1::uuid OR m.user_id IS NOT NULL)",
+    " ON m.workspace_id = w.id AND m.user_id = $1::text AND m.state = 'active'",
+    " AND m.owner_user_id = w.owner_user_id AND m.role IN ('agency_admin','staff','client')",
+    "WHERE w.state = 'active' AND (w.owner_user_id = $1::text OR m.user_id IS NOT NULL)",
     'ORDER BY w.id ASC LIMIT 26'
   ].join('\n'),
   requests:[
-    'SELECT r.id, r.workspace_id, r.title, r.kind, r.status, r.version, r.updated_at',
+    'SELECT r.id, r.workspace_id, r.title, r.kind, r.status, r.version,',
+    ` to_char(r.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at`,
     'FROM growth_starter.work_requests AS r',
     'JOIN growth_starter.workspaces AS w ON w.id = r.workspace_id',
     "WHERE w.state = 'active' AND r.workspace_id = $2::text",
-    ' AND (w.owner_user_id = $1::uuid OR EXISTS (',
+    ' AND (w.owner_user_id = $1::text OR EXISTS (',
     ' SELECT 1 FROM growth_starter.memberships AS m',
-    " WHERE m.workspace_id = w.id AND m.user_id = $1::uuid AND m.state = 'active'",
+    " WHERE m.workspace_id = w.id AND m.user_id = $1::text AND m.state = 'active'",
+    " AND m.owner_user_id = w.owner_user_id AND m.role IN ('agency_admin','staff','client')",
     ' ))',
     'ORDER BY r.updated_at DESC, r.id ASC LIMIT $3::integer OFFSET $4::integer'
   ].join('\n')

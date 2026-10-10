@@ -77,11 +77,16 @@ test('fixed queries: only SELECT and explicit columns, tenant authorization on b
   for(const [name,sql] of Object.entries(PRIVATE_READ_SQL)){
     assert.match(sql,/^SELECT /);
     assert.doesNotMatch(sql,/\bselect\s+\*/i);
-    assert.ok(sql.includes('$1::uuid'));
+    assert.ok(sql.includes('$1::text'));
     assert.match(sql,/m\.state = 'active'/);
     assert.ok(!/;\s*(?:delete|insert|update|grant|execute)/i.test(sql),name);
   }
   assert.match(PRIVATE_READ_SQL.requests,/r\.workspace_id = \$2::text/);
+  for(const sql of Object.values(PRIVATE_READ_SQL)) {
+    assert.match(sql,/m\.owner_user_id = w\.owner_user_id/);
+    assert.match(sql,/m\.role IN \('agency_admin','staff','client'\)/);
+  }
+  assert.match(PRIVATE_READ_SQL.requests,/to_char\(r\.updated_at AT TIME ZONE 'UTC'/);
   assert.match(PRIVATE_READ_SQL.requests,/LIMIT \$3::integer OFFSET \$4::integer/);
 });
 test('A sees only workspace A and its records; B sees only workspace B',async()=>{

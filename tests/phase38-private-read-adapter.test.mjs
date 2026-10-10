@@ -110,7 +110,7 @@ test('revocation between application ACL and request query is denied by SQL memb
   f.members.set(C,'revoked');
   await denied(f.api.listRequests(t(C),WA),403);
   assert.match(PRIVATE_READ_SQL.requests,/EXISTS/);
-  assert.match(PRIVATE_READ_SQL.requests,/m\.user_id = \$1::uuid/);
+  assert.match(PRIVATE_READ_SQL.requests,/m\.user_id = \$1::text/);
 });
 test('forged owner/admin/workspace claims cannot become SQL identity',async()=>{
   const f=fixture();

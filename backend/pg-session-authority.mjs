@@ -38,6 +38,18 @@ const SECURITY_SQL=`SELECT current_user AS actor,session_user AS login,
  has_table_privilege(current_user,'auth.users','UPDATE') AS user_update,
  has_table_privilege(current_user,'auth.sessions','SELECT') AS session_full_select,
  has_table_privilege(current_user,'auth.users','SELECT') AS user_full_select,
+ -- Exact effective column allowlist. Catch additional column-level grants,
+ -- including privileges inherited implicitly through PUBLIC/role membership.
+ (SELECT COALESCE(jsonb_agg(a.attname ORDER BY a.attname),'[]'::jsonb)
+  FROM pg_attribute a WHERE a.attrelid='auth.sessions'::regclass
+    AND a.attnum>0 AND NOT a.attisdropped
+    AND a.attname NOT IN ('id','user_id','not_after')
+    AND has_column_privilege(current_user,a.attrelid,a.attname,'SELECT')) AS extra_session_columns,
+ (SELECT COALESCE(jsonb_agg(a.attname ORDER BY a.attname),'[]'::jsonb)
+  FROM pg_attribute a WHERE a.attrelid='auth.users'::regclass
+    AND a.attnum>0 AND NOT a.attisdropped
+    AND a.attname NOT IN ('id','deleted_at','banned_until')
+    AND has_column_privilege(current_user,a.attrelid,a.attname,'SELECT')) AS extra_user_columns,
  has_schema_privilege(current_user,'growth_starter','USAGE') AS growth_schema,
  has_database_privilege(current_user,current_database(),'CREATE') AS db_create
  FROM pg_roles r WHERE r.rolname=current_user`;
@@ -79,7 +91,12 @@ export async function createPgSessionAuthority({pool,now=()=>Date.now()}={}){
      !security.session_until || !security.user_id || !security.banned_until ||
      !security.deleted_at || security.session_insert || security.session_update ||
      security.session_delete || security.user_update || security.session_full_select ||
-     security.user_full_select || security.growth_schema ||
+     security.user_full_select ||
+     !Array.isArray(security.extra_session_columns) ||
+     security.extra_session_columns.length!==0 ||
+     !Array.isArray(security.extra_user_columns) ||
+     security.extra_user_columns.length!==0 ||
+     security.growth_schema ||
      security.db_create)blocked();
   const p=(await c.query(POLICY_SQL)).rows?.[0];
   if(!p || Number(p.expected_policies)!==3 || Number(p.rls_tables)<7 ||

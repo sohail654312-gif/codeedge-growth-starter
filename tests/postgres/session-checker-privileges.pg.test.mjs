@@ -33,6 +33,19 @@ test('review-only session role can check auth session membership, not read unrel
     await assert.rejects(c.query('DELETE FROM auth.sessions'),e=>e.code==='25006'||e.code==='42501');
     await c.query('ROLLBACK TO SAVEPOINT denied_write');await c.query('RELEASE SAVEPOINT denied_write');
    }finally{await c.query('ROLLBACK TO SAVEPOINT reader_scope');await c.query('RELEASE SAVEPOINT reader_scope');}
+   // The checker must reject silently broadened *column-level* rights.
+   // This is an actual PostgreSQL privilege mutation inside disposable ROLLBACK.
+   const extrasSql=`SELECT
+      (SELECT COALESCE(jsonb_agg(a.attname ORDER BY a.attname),'[]'::jsonb)
+       FROM pg_attribute a WHERE a.attrelid='auth.users'::regclass
+         AND a.attnum>0 AND NOT a.attisdropped
+         AND a.attname NOT IN ('id','deleted_at','banned_until')
+         AND has_column_privilege('growth_starter_session_checker',a.attrelid,a.attname,'SELECT')) AS extras`;
+   assert.deepEqual((await c.query(extrasSql)).rows[0].extras,[]);
+   await c.query('GRANT SELECT(email) ON auth.users TO growth_starter_session_checker');
+   assert.deepEqual((await c.query(extrasSql)).rows[0].extras,['email']);
+   await c.query('REVOKE SELECT(email) ON auth.users FROM growth_starter_session_checker');
+   assert.deepEqual((await c.query(extrasSql)).rows[0].extras,[]);
    await c.query('DELETE FROM auth.sessions WHERE id=$1',[sid]);
    await c.query('SET LOCAL ROLE growth_starter_session_checker');
    const revoked=await c.query('SELECT id FROM auth.sessions WHERE id=$1',[sid]);

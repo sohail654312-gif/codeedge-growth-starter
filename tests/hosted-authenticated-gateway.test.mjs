@@ -22,7 +22,7 @@ test('even catalog-verified synthetic session authority cannot reactivate the di
   auth_schema:true,session_id:true,session_user:true,session_until:true,user_id:true,
   banned_until:true,deleted_at:true,session_insert:false,session_update:false,
   session_delete:false,user_update:false,session_full_select:false,user_full_select:false,
-  growth_schema:false,db_create:false};
+  growth_schema:false,db_create:false,extra_session_columns:[],extra_user_columns:[]};
  const grants={expected_policies:3,rls_tables:7,auth_schema_usage:true,ws_select:true,
   member_select:true,request_select:true,legacy_list:false,legacy_requests:false,
   runtime_list:false,runtime_requests:false};

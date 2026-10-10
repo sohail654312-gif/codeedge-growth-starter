@@ -13,7 +13,8 @@ function fixture({revoke=false,missing=false,security={},policy={},queryError=fa
   can_set_legacy_reader:false,can_set_postgres:false,auth_schema:true,session_id:true,session_user:true,
   session_until:true,user_id:true,banned_until:true,deleted_at:true,
   session_insert:false,session_update:false,session_delete:false,user_update:false,
-  growth_schema:false,db_create:false,session_full_select:false,user_full_select:false,...security};
+  growth_schema:false,db_create:false,session_full_select:false,user_full_select:false,
+  extra_session_columns:[],extra_user_columns:[],...security};
  const policies={expected_policies:3,rls_tables:7,auth_schema_usage:true,ws_select:true,
   member_select:true,request_select:true,legacy_list:false,legacy_requests:false,
   runtime_list:false,runtime_requests:false,...policy};
@@ -44,6 +45,8 @@ test('fail-closed PostgreSQL principal and effective RLS/grants are checked befo
    {security:{growth_schema:true}},{security:{can_set_authenticated:true}},
    {security:{can_set_postgres:true}},
    {security:{session_full_select:true}},
+   {security:{extra_session_columns:['ip']}},{security:{extra_user_columns:['email']}},
+   {security:{extra_user_columns:null}},
    {policy:{expected_policies:0}},{policy:{legacy_list:true}},
    {policy:{auth_schema_usage:false}},{policy:{member_select:false}}]){
   await assert.rejects(createPgSessionAuthority({pool:fixture(bad).pool}),/unavailable/);

@@ -1,3 +1,4 @@
+import {CATALOG_SQL,syntheticAcceptedCatalogForTests} from './pg-rls-catalog.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createPgSessionAuthority} from './pg-session-authority.mjs';
@@ -21,6 +22,7 @@ function fixture({revoke=false,missing=false,security={},policy={},queryError=fa
    calls.push({sql,args});
    if(queryError && sql.includes('FROM auth.sessions'))throw Error('backend outage');
    if(sql.includes('FROM pg_roles r'))return{rows:[flags]};
+   if(sql===CATALOG_SQL)return{rows:[syntheticAcceptedCatalogForTests()]};
    if(sql.includes('FROM pg_policies'))return{rows:[policies]};
    if(sql.includes('FROM auth.sessions'))return{rows:missing||revoke?[]:[{
     session_id:SID,user_id:A,not_after:null,deleted_at:null,banned_until:null

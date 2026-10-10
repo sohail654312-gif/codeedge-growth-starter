@@ -17,3 +17,8 @@ BEGIN
 END $cutover$;
 -- A future verified Supabase/PostgREST JWT + RLS path must be independently
 -- authenticated and session-revocation-tested, not trusted based on PG GUCs.
+
+-- Phase 3.5 review-only correction: NOINHERIT does not prevent SET ROLE.
+-- Transactional privilege cutover MUST also remove the role-switch edge.
+-- Apply only after the secure replacement has been accepted.
+REVOKE growth_starter_reader FROM growth_starter_runtime;

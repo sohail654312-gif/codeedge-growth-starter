@@ -1,3 +1,4 @@
+import {CATALOG_SQL,checkAcceptedCatalog} from './pg-rls-catalog.mjs';
 /**
  * Phase 3.3D — server-only PostgreSQL-backed active-session authority.
  * Supabase documents checking auth.sessions by (session_id,user_id) to enforce
@@ -84,6 +85,8 @@ export async function createPgSessionAuthority({pool,now=()=>Date.now()}={}){
   if(!p || Number(p.expected_policies)!==3 || Number(p.rls_tables)<7 ||
      !p.auth_schema_usage || !p.ws_select || !p.member_select || !p.request_select ||
      p.legacy_list || p.legacy_requests || p.runtime_list || p.runtime_requests)blocked();
+  const catalog=(await c.query(CATALOG_SQL)).rows?.[0];
+  checkAcceptedCatalog(catalog);
   await c.query('COMMIT');
  }catch{
   try{await c.query('ROLLBACK');}catch{}

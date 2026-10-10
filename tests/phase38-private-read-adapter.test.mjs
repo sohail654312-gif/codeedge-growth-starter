@@ -28,8 +28,8 @@ function fixture() {
   };
   const active=async({token,userId,sessionId})=>{
     if(sessionDown)throw Error('Fictional session registry offline');
-    return {active:!revoked.has(userId)&&tokens.get(userId)===token,
-      userId,sessionId};
+    return {active:!revoked.has(userId)&&tokens.get(userId)===token &&
+      sess.get(userId)===sessionId,userId,sessionId:sess.get(userId)};
   };
   const permitted=(uid,ws)=>ws===WA?(uid===A || (uid===C&&members.get(C)==='active')):uid===B&&ws===WB;
   const read=async({id,sql,params})=>{

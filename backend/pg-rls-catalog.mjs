@@ -138,7 +138,8 @@ export const CATALOG_SQL=`SELECT
    FROM (VALUES ('staging_list_workspaces(text)'),
      ('staging_list_requests(text,text,integer)'),('staging_session_active(text,text,text)')) AS x(sig)) AS legacy,
   (SELECT COALESCE(jsonb_agg(jsonb_build_object('role',r.role,'target',t.target,
-   'canSet',pg_has_role(r.role,t.target,'SET'))),'[]'::jsonb)
+   'canSet',CASE WHEN EXISTS(SELECT 1 FROM pg_roles pr WHERE pr.rolname=t.target)
+    THEN pg_has_role(r.role,t.target,'SET') ELSE false END)),'[]'::jsonb)
    FROM (VALUES ('anon'),('authenticated'),('service_role'),
     ('growth_starter_reader'),('growth_starter_runtime'),
     ('growth_starter_session_checker')) AS r(role)

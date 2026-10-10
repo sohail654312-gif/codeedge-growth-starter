@@ -1,3 +1,4 @@
+import {CATALOG_SQL,syntheticAcceptedCatalogForTests} from '../backend/pg-rls-catalog.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHostedAuthenticatedReadGateway} from '../backend/authenticated-read-gateway.mjs';
@@ -28,6 +29,7 @@ test('only security-readback-branded PostgreSQL authority enables hosted constru
  const pool={connect:async()=>({
   query:async(sql)=>{
    if(sql.includes('FROM pg_roles r'))return{rows:[flags]};
+   if(sql===CATALOG_SQL)return{rows:[syntheticAcceptedCatalogForTests()]};
    if(sql.includes('FROM pg_policies'))return{rows:[grants]};
    return{rows:[]};
   },release(){}

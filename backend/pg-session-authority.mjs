@@ -9,6 +9,10 @@
  * SELECT on auth.sessions and auth.users, not service_role/postgres privileges.
  * No hosted grants or credentials are provisioned by this file.
  */
+const validatedAuthorities=new WeakSet();
+export function isVerifiedPgSessionAuthority(value){
+ return typeof value==='object' && value!==null && validatedAuthorities.has(value);
+}
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SESSION_SQL=`SELECT s.id::text AS session_id, s.user_id::text AS user_id,
  s.not_after, u.banned_until, u.deleted_at
@@ -30,6 +34,8 @@ const SECURITY_SQL=`SELECT current_user AS actor,session_user AS login,
  has_table_privilege(current_user,'auth.sessions','UPDATE') AS session_update,
  has_table_privilege(current_user,'auth.sessions','DELETE') AS session_delete,
  has_table_privilege(current_user,'auth.users','UPDATE') AS user_update,
+ has_table_privilege(current_user,'auth.sessions','SELECT') AS session_full_select,
+ has_table_privilege(current_user,'auth.users','SELECT') AS user_full_select,
  has_schema_privilege(current_user,'growth_starter','USAGE') AS growth_schema,
  has_database_privilege(current_user,current_database(),'CREATE') AS db_create
  FROM pg_roles r WHERE r.rolname=current_user`;
@@ -70,7 +76,8 @@ export async function createPgSessionAuthority({pool,now=()=>Date.now()}={}){
      !security.auth_schema || !security.session_id || !security.session_user ||
      !security.session_until || !security.user_id || !security.banned_until ||
      !security.deleted_at || security.session_insert || security.session_update ||
-     security.session_delete || security.user_update || security.growth_schema ||
+     security.session_delete || security.user_update || security.session_full_select ||
+     security.user_full_select || security.growth_schema ||
      security.db_create)blocked();
   const p=(await c.query(POLICY_SQL)).rows?.[0];
   if(!p || Number(p.expected_policies)!==3 || Number(p.rls_tables)<7 ||
@@ -81,7 +88,7 @@ export async function createPgSessionAuthority({pool,now=()=>Date.now()}={}){
   try{await c.query('ROLLBACK');}catch{}
   blocked();
  }finally{c.release();}
- return Object.freeze({
+ const authority=Object.freeze({
   async checkAuthoritativeSession({userId,sessionId}={}){
    if(!UUID.test(userId||'') || !UUID.test(sessionId||''))return {active:false};
    const conn=await pool.connect().catch(()=>blocked());
@@ -106,4 +113,6 @@ export async function createPgSessionAuthority({pool,now=()=>Date.now()}={}){
    }finally{conn.release();}
   }
  });
+ validatedAuthorities.add(authority);
+ return authority;
 }

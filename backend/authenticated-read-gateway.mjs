@@ -1,3 +1,4 @@
+import {isVerifiedPgSessionAuthority} from './pg-session-authority.mjs';
 import {createServer} from 'node:http';
 import {createPostgrestReadBoundary,PostgrestBoundaryError} from './postgrest-read-boundary.mjs';
 import {createTrustedSessionGate} from './trusted-session-gate.mjs';
@@ -36,12 +37,10 @@ function permittedSearch(url,allowed){
  * acceptance. checkAuthoritativeSession must be an isolated trusted provider,
  * not caller input or an always-true stub outside synthetic tests.
  */
-export function createAuthenticatedReadGateway({
+function buildAuthenticatedGateway({
   projectUrl,publishableKey,allowedOrigin,checkAuthoritativeSession,
-  fetchImpl=globalThis.fetch,now=()=>Date.now(),
-  enableForSyntheticTesting=false
+  fetchImpl=globalThis.fetch,now=()=>Date.now()
 }={}){
-  if(enableForSyntheticTesting!==true)fail();
   const allowed=originOf(allowedOrigin);
   const session=createTrustedSessionGate({projectUrl,checkAuthoritativeSession,now});
   const reader=createPostgrestReadBoundary({
@@ -104,4 +103,22 @@ export function createAuthenticatedReadGateway({
     }
   };
   return Object.freeze({handler,createServer:()=>createServer(handler)});
+}
+
+/** Existing synthetic-only fixture path remains explicitly disabled by default. */
+export function createAuthenticatedReadGateway({enableForSyntheticTesting=false,...options}={}){
+  if(enableForSyntheticTesting!==true)fail();
+  return buildAuthenticatedGateway(options);
+}
+
+/**
+ * Separate hosted construction path. The opaque authority brand is minted
+ * only after PostgreSQL login/privilege/RLS/revocation checks. No testing
+ * flag can enable this route. The staging Node process also requires a
+ * loopback-only HTTPS reverse-proxy boundary.
+ */
+export function createHostedAuthenticatedReadGateway({sessionAuthority,...options}={}){
+  if(!isVerifiedPgSessionAuthority(sessionAuthority))fail();
+  return buildAuthenticatedGateway({...options,
+    checkAuthoritativeSession:sessionAuthority.checkAuthoritativeSession});
 }

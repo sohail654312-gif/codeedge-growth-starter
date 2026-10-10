@@ -22,6 +22,7 @@ const SECURITY_SQL=`SELECT current_user AS actor,session_user AS login,
  r.rolcanlogin,r.rolsuper,r.rolbypassrls,r.rolinherit,r.rolcreaterole,r.rolcreatedb,r.rolreplication,
  pg_has_role(current_user,'authenticated','SET') AS can_set_authenticated,
  pg_has_role(current_user,'service_role','SET') AS can_set_service_role,
+ pg_has_role(current_user,'postgres','SET') AS can_set_postgres,
  pg_has_role(current_user,'growth_starter_reader','SET') AS can_set_legacy_reader,
  has_schema_privilege(current_user,'auth','USAGE') AS auth_schema,
  has_column_privilege(current_user,'auth.sessions','id','SELECT') AS session_id,
@@ -72,7 +73,7 @@ export async function createPgSessionAuthority({pool,now=()=>Date.now()}={}){
      security.login!==security.actor || !security.rolcanlogin || security.rolsuper ||
      security.rolbypassrls || security.rolinherit || security.rolcreaterole ||
      security.rolcreatedb || security.rolreplication || security.can_set_authenticated ||
-     security.can_set_service_role || security.can_set_legacy_reader ||
+     security.can_set_service_role || security.can_set_postgres || security.can_set_legacy_reader ||
      !security.auth_schema || !security.session_id || !security.session_user ||
      !security.session_until || !security.user_id || !security.banned_until ||
      !security.deleted_at || security.session_insert || security.session_update ||
@@ -98,6 +99,9 @@ export async function createPgSessionAuthority({pool,now=()=>Date.now()}={}){
     const result=await conn.query(SESSION_SQL,[sessionId,userId]);
     await conn.query('COMMIT');
     const row=result.rows?.[0];
+    // Missing columns must never be silently interpreted as healthy data.
+    if(row && !['session_id','user_id','not_after','banned_until','deleted_at']
+      .every(k=>Object.prototype.hasOwnProperty.call(row,k)))blocked();
     const nowSeconds=Math.floor(now()/1000);
     const notAfter=timestamp(row?.not_after);
     const banned=timestamp(row?.banned_until);

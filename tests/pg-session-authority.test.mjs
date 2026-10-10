@@ -9,7 +9,7 @@ function fixture({revoke=false,missing=false,security={},policy={},queryError=fa
  const flags={actor:'growth_starter_session_checker',login:'growth_starter_session_checker',
   rolcanlogin:true,rolsuper:false,rolbypassrls:false,rolinherit:false,rolcreaterole:false,
   rolcreatedb:false,rolreplication:false,can_set_authenticated:false,can_set_service_role:false,
-  can_set_legacy_reader:false,auth_schema:true,session_id:true,session_user:true,
+  can_set_legacy_reader:false,can_set_postgres:false,auth_schema:true,session_id:true,session_user:true,
   session_until:true,user_id:true,banned_until:true,deleted_at:true,
   session_insert:false,session_update:false,session_delete:false,user_update:false,
   growth_schema:false,db_create:false,session_full_select:false,user_full_select:false,...security};
@@ -40,6 +40,7 @@ test('fail-closed PostgreSQL principal and effective RLS/grants are checked befo
  for(const bad of [{security:{rolsuper:true}},{security:{rolinherit:true}},
    {security:{actor:'postgres'}},{security:{session_id:false}},
    {security:{growth_schema:true}},{security:{can_set_authenticated:true}},
+   {security:{can_set_postgres:true}},
    {security:{session_full_select:true}},
    {policy:{expected_policies:0}},{policy:{legacy_list:true}},
    {policy:{auth_schema_usage:false}},{policy:{member_select:false}}]){

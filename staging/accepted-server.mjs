@@ -10,6 +10,7 @@
  * still required before exposing any real clients.
  */
 import {createServer} from 'node:http';
+import {pathToFileURL} from 'node:url';
 import {Pool} from 'pg';
 import {readAcceptedStagingConfig} from './accepted-config.mjs';
 import {createPgSessionAuthority} from '../backend/pg-session-authority.mjs';
@@ -58,7 +59,7 @@ export async function startAcceptedStaging({env=process.env,
   throw Error('Trusted staging runtime startup blocked; verify approved security prerequisites.');
  }
 }
-if(process.argv[1] && import.meta.url.endsWith('/accepted-server.mjs')){
+if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
  let runtime;
  try{
   runtime=await startAcceptedStaging();

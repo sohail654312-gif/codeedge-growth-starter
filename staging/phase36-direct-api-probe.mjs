@@ -7,7 +7,7 @@
  * Denial without a known seeded row cannot prove immediate revocation.
  * HTTP 404/406 alone cannot independently attest Data API exposure settings.
  */
-const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const workspace=/^ws_[A-Za-z0-9_-]{8,128}$/;
 const fail=()=>{throw Error('Approved synthetic direct-API probe prerequisites unavailable.');};
 export async function probeRevokedTokenDirectApi({

@@ -99,3 +99,82 @@ tokens or client details.
 **Failure behavior:** stop acceptance, block gateway activation, and use
 maintenance mode. Do not silently re-enable legacy HTTP/SQL privileges.
 See `docs/PHASE3-2-CUTOVER-RUNBOOK.md` and `docs/PHASE3-3-OPERATIONS.md`.
+
+## Phase 3.3D — new source-only trusted hosted entrypoint (NOT ACTIVATED)
+
+The old `npm start` is intentionally disabled. A **separate** operator-approved
+command now exists: `npm run start:accepted` (from `staging/`). It will not
+listen unless **all** of the following are true: a dedicated authenticated
+PostgreSQL `growth_starter_session_checker` LOGIN connects over validated TLS
+with minimally scoped Auth-column grants; the three authenticated workspace,
+membership and work-request RLS policies and column grants are installed;
+all old actor-ID function EXECUTE rights have been revoked from restricted
+reader/runtime roles; and the service is bound to 127.0.0.1 behind a trusted
+HTTPS reverse proxy that overrides `X-Forwarded-Proto` and
+`X-Forwarded-Host`. Header values must not be forwarded from untrusted
+clients without being replaced by the ingress.
+
+**This is a real executable server source path, not an enabled deployment.**
+The source preflight is necessary but not sufficient for independent host
+acceptance. A manager-controlled staging setup, TLS and secrets inspection,
+synthetic signed-user tests and an external security acceptance are still
+required before client traffic.
+
+### Server-only secret variables (never put values in GitHub or browser)
+
+- `STAGING_SUPABASE_URL`: exact `https://<growth-starter-ref>.supabase.co`
+- `STAGING_SUPABASE_PUBLISHABLE_KEY`: publishable public API key only
+- `STAGING_SESSION_DATABASE_URL`: dedicated, separately protected
+  `growth_starter_session_checker` PostgreSQL LOGIN with a unique password;
+  it is NOT the old `growth_starter_runtime`, superuser or service_role
+- `STAGING_POSTGRES_CA_PEM`: correctly validated Supabase PostgreSQL CA
+- `STAGING_ALLOWED_ORIGIN`: exact HTTPS frontend origin
+- `STAGING_PUBLIC_HOST`: approved HTTPS ingress hostname only
+- `STAGING_DEPLOYMENT_SHA`: exact audited Git SHA (operator must verify
+  this independently against the actual deployment; a string alone is not proof)
+- Optional `PORT`, `STAGING_BIND_HOST=127.0.0.1` only.
+
+### Auth session behavior
+
+Supabase documentation (<https://supabase.com/docs/guides/auth/sessions>)
+states a signed-out session's row is removed from `auth.sessions`, while its
+JWT may remain valid until expiry. The new session checker joins
+`auth.sessions` by exact UUID session and user to `auth.users`, checks
+`not_after`, `banned_until` and `deleted_at`. It runs as a narrow SQL
+principal after the original bearer has been verified by Supabase Auth at
+`/auth/v1/user`. This does **not** substitute a SQL session GUC for JWT
+signature verification, does not use the old actor-ID functions and cannot
+be directly called by clients.
+
+The proposed privileges are in
+`db/drafts/0010_session_checker_minimal_auth_columns_REVIEW_ONLY.sql`.
+The role is deliberately **NOLOGIN**, with no password in source; enabling
+LOGIN and granting Auth-table columns requires separate owner permission and
+a security reviewer. Never expose `auth` or this role to PostgREST.
+
+### Safe verified transition ordering — owner and reviewer approvals required
+
+1. Read-only preflight and independent review of Auth schema columns,
+   postgres grants, RLS policies and any API exposure.
+2. Backup isolated staging config. Activate owner-approved RLS and narrow
+   grants but keep all externally reachable client API routes off.
+3. Test genuinely signed synthetic A/B/Member-C tokens against Supabase
+   PostgREST directly, including foreign-tenant denial and immediate
+   membership-revocation. Keep caller SQL role off the client network.
+4. For immediate logout checks, review the minimal Auth-column grants for the
+   dedicated private session checker and confirm the correct real login via
+   host secret manager.
+5. During a controlled maintenance window, revoke legacy EXECUTE rights
+   via review-only `0007` followed by `0009`, with an approved host cutover.
+   If revocation fails, keep maintenance mode; never restore unsafe EXECUTE
+   access to serve real clients.
+6. Verify `npm run start:accepted` on trusted HTTPS ingress, original bearer
+   Auth verification, exact active session check, RLS, real A/B/C HTTPS
+   acceptance, direct SQL privilege-denial tests and provider failures.
+7. Obtain independent security reviewer signoff; clean up fictional users,
+   sessions and workspaces and verify no secrets in logs. Never onboard real
+   patients, launch production or enable external actions without approval.
+
+The current hosted project intentionally lacks the necessary RLS policies,
+trusted-login grants and synthetic sessions; the accepted server **will fail
+closed** if invoked against it. No hosted changes were made during this phase.

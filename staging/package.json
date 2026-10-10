@@ -6,8 +6,13 @@
   "description": "Isolated read-only staging API. Not the client production app.",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check config.mjs"
+    "check": "node --check server.mjs && node --check config.mjs && node --check accepted-server.mjs && node --check accepted-config.mjs",
+    "start:accepted": "node accepted-server.mjs"
   },
-  "dependencies": {"pg": "8.13.3"},
-  "engines": {"node": ">=22"}
+  "dependencies": {
+    "pg": "8.13.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
 }

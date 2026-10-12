@@ -1,5 +1,8 @@
 # CODEEDGE GROWTH STARTER — PHASE 3.12 SESSION-AUTHORITY DECISION
 
+> Support status update (2026-10-12): The owner confirmed ticket SU-502526, conversation cnv_1olowg2m, submitted and linked to codeedge-growth-starter-staging (dbppeymhsemvghbvuvof). This supersedes the historical NOT SUBMITTED entries below, which describe an earlier state. Only an automated acknowledgment was visible in connected Gmail at the latest check. No technical reply or provider approval confirmed; hosted API activation remains BLOCKED.
+
+
 **Provider decision: UNVERIFIED — PROVIDER DECISION PENDING.** No hosted activation is accepted. All work is source-only plus disposable PostgreSQL 17 testing and read-only staging metadata.
 
 ## A. Baseline

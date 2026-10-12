@@ -3,6 +3,7 @@ import {Download,FilePenLine,ShieldCheck} from 'lucide-react';
 import type {SeoReport} from '../backend/seo-growth.mjs';
 import type {PremiumPlan} from '../backend/premium-content-intelligence.mjs';
 import {prepareWebsiteImprovementProposals} from '../backend/website-proposals.mjs';
+import {prepareOfflinePilotReviewPack} from '../backend/pilot-review-pack.mjs';
 import './website-proposals.css';
 function offlineDownload(name:string,data:string){
  const href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
@@ -51,6 +52,8 @@ export default function WebsiteProposalDesk({seoReport,premiumPlan}:{
       proposal:p,correctionRequested:correction.trim().slice(0,600),
       acknowledged:false,authorisedActor:null
     },null,2))}><Download size={14}/> Download local review draft</button>
+    <button type="button" onClick={()=>offlineDownload('codeedge-fictional-pilot-review-pack.json',JSON.stringify(
+      prepareOfflinePilotReviewPack({seoReport,premiumPlan}),null,2))}><Download size={14}/> Download offline pilot review pack</button>
     <button type="button" disabled title="Hosted identity and transaction gate not accepted">Send to Codeedge — disabled</button>
    </div>
    <p className="wpd-warning">No agency notification, content modification, hosting deployment, approval or report persistence has occurred.</p>

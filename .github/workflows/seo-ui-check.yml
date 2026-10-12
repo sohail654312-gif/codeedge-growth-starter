@@ -8,7 +8,10 @@ on:
       - 'src/WebsiteProposalDesk.tsx'
       - 'src/website-proposals.css'
       - 'backend/website-proposals.*'
-      - 'tests/website-proposals.test.mjs'
+      - 'backend/pilot-review-*.mjs'
+      - 'backend/pilot-review-*.d.mts'
+      - 'tests/pilot-review-pack.test.mjs'
+      - 'tests/website-proposals.test.mjs tests/pilot-review-pack.test.mjs'
       - 'src/premium-content.css'
       - 'backend/premium-content-intelligence.*'
       - 'backend/premium-content-demo.mjs'
@@ -32,6 +35,9 @@ on:
       - 'src/WebsiteProposalDesk.tsx'
       - 'src/website-proposals.css'
       - 'backend/website-proposals.*'
+      - 'backend/pilot-review-*.mjs'
+      - 'backend/pilot-review-*.d.mts'
+      - 'tests/pilot-review-pack.test.mjs'
       - 'tests/website-proposals.test.mjs'
       - 'src/premium-content.css'
       - 'backend/premium-content-intelligence.*'
@@ -73,4 +79,6 @@ jobs:
           node --check backend/premium-content-intelligence.mjs
           node --check backend/premium-content-demo.mjs
           node --check backend/website-proposals.mjs
+          node --check backend/pilot-review-pack.mjs
+          node --check backend/pilot-review-demo.mjs
           node --test tests/seo-growth.test.mjs tests/seo-search-data.test.mjs tests/premium-content-intelligence.test.mjs tests/website-proposals.test.mjs

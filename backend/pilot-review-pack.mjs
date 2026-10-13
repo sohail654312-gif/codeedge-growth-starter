@@ -9,7 +9,7 @@ export const PILOT_REVIEW_BOUNDARY=Object.freeze({
  liveIdentity:false,liveGoogleMetrics:false,hostedPersistence:false,
  clientApproval:false,agencySubmission:false,publication:false
 });
-export function prepareOfflinePilotReviewPack({seoReport,premiumPlan}){
+export function prepareOfflinePilotReviewPack({seoReport,premiumPlan,correctionDrafts=[]}){
  const proposals=prepareWebsiteImprovementProposals({seoReport,premiumPlan});
  check(seoReport.publication?.enabled===false &&
    seoReport.publication?.requiresHumanApproval===true,
@@ -25,6 +25,29 @@ export function prepareOfflinePilotReviewPack({seoReport,premiumPlan}){
    'Social or provider actions not accepted.');
  check(premiumPlan.social.proposals.every(p=>p.publishEnabled===false),
    'Social publishing must remain disabled.');
+ // Feedback is a detached, local-only handoff. Never accept caller-supplied
+ // approval, actor, recipient, or publication metadata.
+ check(Array.isArray(correctionDrafts) && correctionDrafts.length<=18 &&
+   correctionDrafts.length<=proposals.proposals.length,
+   'Bounded local correction drafts required.');
+ const proposalIds=new Set(proposals.proposals.map(p=>p.id));
+ const seenIds=new Set();
+ const localCorrections=correctionDrafts.map(draft=>{
+   check(draft && typeof draft==='object' && !Array.isArray(draft) &&
+     Object.keys(draft).sort().join(',')==='note,proposalId,workspaceId' &&
+     draft.workspaceId===proposals.workspaceId &&
+     typeof draft.proposalId==='string' && proposalIds.has(draft.proposalId) &&
+     !seenIds.has(draft.proposalId) &&
+     typeof draft.note==='string' && draft.note.length<=600,
+     'Invalid, foreign or duplicate local correction draft.');
+   const note=draft.note.replace(/[\u0000-\u001F\u007F]/g,' ').replace(/\s+/g,' ').trim();
+   check(note.length>=4,'Correction note must contain at least four characters.');
+   seenIds.add(draft.proposalId);
+   return Object.freeze({
+     workspaceId:proposals.workspaceId,proposalId:draft.proposalId,
+     note,status:'local_only_not_submitted'
+   });
+ });
  return Object.freeze({
   version:PILOT_REVIEW_BOUNDARY.version,mode:PILOT_REVIEW_BOUNDARY.mode,
   workspaceId:proposals.workspaceId,
@@ -64,13 +87,14 @@ export function prepareOfflinePilotReviewPack({seoReport,premiumPlan}){
    status:'draft_not_published'
   })),
   websiteProposals:proposals.proposals,
+  correctionDrafts:localCorrections,
   review:{verifiedActor:null,clientApproved:false,agencyAssigned:false,
    published:false,requiresProfessionalFactCheck:true,submissionStatus:'not_submitted'},
   externalActions:{read:false,write:false,notify:false,approve:false,publish:false,providerOAuth:false},
   limitations:[
    'Operator-supplied or fictional HTML evidence, never live authenticated client analytics.',
    'SEO, social and clinical statements require human and professional fact checks.',
-   'This file is a local draft: no request, approval, storage or publication occurs.'
+   'This file is a local draft: correction notes are not submitted, stored, approved or published.'
   ]
  });
 }

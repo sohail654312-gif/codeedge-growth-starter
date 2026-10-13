@@ -13,18 +13,25 @@ function offlineDownload(name:string,data:string){
 export default function WebsiteProposalDesk({seoReport,premiumPlan}:{
  seoReport:SeoReport;premiumPlan:PremiumPlan
 }){
- const [index,setIndex]=useState(0),[correction,setCorrection]=useState('');
+ const [index,setIndex]=useState(0),[notes,setNotes]=useState<Record<string,string>>({});
  const result=useMemo(()=>{
   try{return {data:prepareWebsiteImprovementProposals({seoReport,premiumPlan}),error:''};}
   catch(e){return {data:null,error:e instanceof Error?e.message:'Proposal not available.'};}
  },[seoReport,premiumPlan]);
  const pack=result.data,p=pack?.proposals[Math.min(index,(pack?.proposals.length||1)-1)];
+ const draftKey=(proposal:{workspaceId:string;id:string;url:string;after:{title:string}})=>
+  JSON.stringify([proposal.workspaceId,proposal.id,proposal.url,proposal.after.title]);
+ const correction=p?notes[draftKey(p)]||'':'';
+ const correctionDrafts=pack?pack.proposals.flatMap(proposal=>{
+   const note=(notes[draftKey(proposal)]||'').trim();
+   return note.length>=4?[{workspaceId:pack.workspaceId,proposalId:proposal.id,note}]:[];
+ }):[];
  return <div className="wpd" aria-label="Review website improvement proposals">
   <div className="wpd-header"><FilePenLine size={20}/><div><h4>Proposed website improvements</h4>
     <p>Before/after drafts based only on supplied HTML and business context. Changes require independent Codeedge and client review.</p></div></div>
   {result.error?<p role="alert">{result.error}</p>:!pack||!p?<p>No page proposal available.</p>:<>
    <label className="wpd-picker">Choose a proposed page
-     <select value={index} onChange={e=>{setIndex(Number(e.target.value));setCorrection('');}}>
+     <select value={index} onChange={e=>setIndex(Number(e.target.value))}>
       {pack.proposals.map((x,i)=><option value={i} key={x.id}>{x.type==='existing_page_content_proposal'?'Supplied page':'New draft page'} · {x.url}</option>)}
      </select></label>
    <p className="wpd-source"><ShieldCheck size={14}/> {p.before.source==='operator_supplied_html'?'Existing page = operator-supplied extract, not a live crawl':'New page proposal, no verified live URL'}</p>
@@ -44,8 +51,9 @@ export default function WebsiteProposalDesk({seoReport,premiumPlan}:{
     {p.after.sections.map((s,i)=><p key={i}><strong>{s.heading}</strong> — {s.draft} <em>Facts to confirm: {s.verify.join(', ')}</em></p>)}
    </div>
    <label className="wpd-note">Client feedback or correction request — local draft, not submitted
-    <textarea rows={3} maxLength={600} value={correction} onChange={e=>setCorrection(e.target.value)}
+    <textarea rows={3} maxLength={600} value={correction} onChange={e=>p&&setNotes(previous=>({...previous,[draftKey(p)]:e.target.value}))}
      placeholder="For example: this service is only available within Manchester city limits."/></label>
+   <p className="wpd-warning" role="status">{correctionDrafts.length} page correction draft(s) included in the offline pilot pack. Notes remain in this browser tab only; minimum 4 characters per note. Do not enter patient information.</p>
    <div className="wpd-actions">
     <button type="button" onClick={()=>offlineDownload('codeedge-content-correction-draft.json',JSON.stringify({
       status:'local_correction_draft_not_submitted',workspaceId:pack.workspaceId,
@@ -53,7 +61,7 @@ export default function WebsiteProposalDesk({seoReport,premiumPlan}:{
       acknowledged:false,authorisedActor:null
     },null,2))}><Download size={14}/> Download local review draft</button>
     <button type="button" onClick={()=>offlineDownload('codeedge-fictional-pilot-review-pack.json',JSON.stringify(
-      prepareOfflinePilotReviewPack({seoReport,premiumPlan}),null,2))}><Download size={14}/> Download offline pilot review pack</button>
+      prepareOfflinePilotReviewPack({seoReport,premiumPlan,correctionDrafts}),null,2))}><Download size={14}/> Download offline pilot review pack</button>
     <button type="button" disabled title="Hosted identity and transaction gate not accepted">Send to Codeedge — disabled</button>
    </div>
    <p className="wpd-warning">No agency notification, content modification, hosting deployment, approval or report persistence has occurred.</p>

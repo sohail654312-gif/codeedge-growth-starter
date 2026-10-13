@@ -13,10 +13,11 @@ export type OfflinePilotReviewPack={
  aeoDrafts:Array<{question:string;answerDraft:string;status:string}>;
  socialConcepts:Array<{concept:string;channelIdeas:string[];callToAction:string;status:string}>;
  websiteProposals:WebsiteProposal[];
+ correctionDrafts:Array<{workspaceId:string;proposalId:string;note:string;status:'local_only_not_submitted'}>;
  review:{verifiedActor:null;clientApproved:false;agencyAssigned:false;published:false;
  requiresProfessionalFactCheck:true;submissionStatus:'not_submitted'};
  externalActions:{read:false;write:false;notify:false;approve:false;publish:false;providerOAuth:false};
  limitations:string[];
 };
 export const PILOT_REVIEW_BOUNDARY:Record<string,unknown>;
-export function prepareOfflinePilotReviewPack(input:{seoReport:SeoReport;premiumPlan:PremiumPlan}):OfflinePilotReviewPack;
+export function prepareOfflinePilotReviewPack(input:{seoReport:SeoReport;premiumPlan:PremiumPlan;correctionDrafts?:Array<{workspaceId:string;proposalId:string;note:string}>}):OfflinePilotReviewPack;

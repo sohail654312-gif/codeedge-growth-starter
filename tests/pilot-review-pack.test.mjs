@@ -7,7 +7,7 @@ import {prepareOfflinePilotReviewPack,PILOT_REVIEW_BOUNDARY} from '../backend/pi
 import {createDisabledWebsiteActionAdapter} from '../backend/website-proposals.mjs';
 const seo=demoGrowthReport('clinic','2026-10-12T00:00:00.000Z');
 const plan=buildPremiumContentStrategy({seoReport:seo});
-const make=(report=seo,strategy=plan)=>prepareOfflinePilotReviewPack({seoReport:report,premiumPlan:strategy});
+const make=(report=seo,strategy=plan,correctionDrafts=[])=>prepareOfflinePilotReviewPack({seoReport:report,premiumPlan:strategy,correctionDrafts});
 test('fictional clinic pilot handoff is actionable offline and never invents live metrics',()=>{
  const pack=make();
  assert.equal(pack.mode,'offline_review_only');
@@ -47,4 +47,39 @@ test('fictional clinic and plumbing handoffs are deterministic and never write o
  const disabled=createDisabledWebsiteActionAdapter();
  assert.throws(()=>disabled.publish(),/disabled/);
  assert.throws(()=>disabled.approve(),/disabled/);
+});
+
+test('multiple page correction drafts survive one local export without approval or notification',()=>{
+ const first=make().websiteProposals[0];
+ const second=make().websiteProposals[1];
+ assert.ok(second,'Fictional clinic must provide two proposals for review.');
+ const corrections=[
+  {workspaceId:seo.workspaceId,proposalId:first.id,note:'Confirm consultation opening hours.'},
+  {workspaceId:seo.workspaceId,proposalId:second.id,note:'  Please verify   eligibility details.  '}
+ ];
+ const pack=make(seo,plan,corrections);
+ assert.deepEqual(pack.correctionDrafts.map(d=>d.proposalId),[first.id,second.id]);
+ assert.equal(pack.correctionDrafts[1].note,'Please verify eligibility details.');
+ assert.ok(pack.correctionDrafts.every(d=>d.workspaceId===pack.workspaceId &&
+   d.status==='local_only_not_submitted'));
+ assert.equal(pack.review.clientApproved,false);
+ assert.equal(pack.review.agencyAssigned,false);
+ assert.deepEqual(Object.values(pack.externalActions),Array(6).fill(false));
+ assert.equal(make().correctionDrafts.length,0);
+});
+test('local correction drafts reject cross-tenant, fake approvals, duplicates and unexpected pages',()=>{
+ const id=make().websiteProposals[0].id;
+ const good={workspaceId:seo.workspaceId,proposalId:id,note:'Please confirm this detail.'};
+ const rejected=[
+  [{...good,workspaceId:'ws_foreign'}],
+  [{...good,proposalId:'WEB-999'}],
+  [good,good],
+  [{...good,approved:true}],
+  [{...good,note:'abc'}],
+  [{...good,note:'x'.repeat(601)}],
+  [{...good,note:null}],
+  'not-an-array'
+ ];
+ for(const input of rejected)
+  assert.throws(()=>make(seo,plan,input),/correction draft|Correction note/);
 });

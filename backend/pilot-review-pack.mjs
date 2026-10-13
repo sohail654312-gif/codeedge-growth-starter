@@ -98,3 +98,49 @@ export function prepareOfflinePilotReviewPack({seoReport,premiumPlan,correctionD
   ]
  });
 }
+
+/**
+ * Restore ONLY untrusted local correction text from our offline export.
+ * No imported actor/approval/metrics/provider state is carried forward.
+ */
+export function restoreOfflinePilotCorrectionDrafts({json,seoReport,premiumPlan}){
+ check(typeof json==='string' && json.length>0 && json.length<=262144,
+   'Local review file must be valid JSON under 256 KB.');
+ let saved;
+ try{saved=JSON.parse(json);}catch{throw Error('Local review file is not valid JSON.');}
+ check(saved && typeof saved==='object' && !Array.isArray(saved),
+   'Local review file must contain a review pack.');
+ const current=prepareOfflinePilotReviewPack({seoReport,premiumPlan});
+ check(saved.version===current.version && saved.mode===current.mode &&
+   saved.workspaceId===current.workspaceId &&
+   saved.business?.name===current.business.name &&
+   saved.business?.website===current.business.website &&
+   saved.evidence?.generatedFrom===current.evidence.generatedFrom &&
+   saved.evidence?.htmlNotLiveVerified===true &&
+   saved.evidence?.realGoogleMetricsVerified===false,
+   'Review file does not match the current offline workspace and evidence.');
+ check(saved.review && JSON.stringify(saved.review)===JSON.stringify(current.review) &&
+   saved.externalActions &&
+   JSON.stringify(saved.externalActions)===JSON.stringify(current.externalActions),
+   'Review file contains untrusted approval or external-action state.');
+ // Refuse changes to the page drafts. The JSON file is neither a signature
+ // nor an authority; this is solely a same-workspace local text restore.
+ check(Array.isArray(saved.websiteProposals) &&
+   JSON.stringify(saved.websiteProposals)===JSON.stringify(current.websiteProposals),
+   'Review file page proposals are stale or have been changed.');
+ check(Array.isArray(saved.correctionDrafts) &&
+   saved.correctionDrafts.length<=current.websiteProposals.length &&
+   saved.correctionDrafts.length<=18,
+   'Review file correction list is invalid.');
+ const drafts=saved.correctionDrafts.map(draft=>{
+   check(draft && typeof draft==='object' && !Array.isArray(draft) &&
+     Object.keys(draft).sort().join(',')==='note,proposalId,status,workspaceId' &&
+     draft.status==='local_only_not_submitted',
+     'Review file has invalid correction status or fields.');
+   return {workspaceId:draft.workspaceId,proposalId:draft.proposalId,note:draft.note};
+ });
+ const validated=prepareOfflinePilotReviewPack({seoReport,premiumPlan,correctionDrafts:drafts});
+ return validated.correctionDrafts.map(d=>Object.freeze({
+   workspaceId:d.workspaceId,proposalId:d.proposalId,note:d.note
+ }));
+}

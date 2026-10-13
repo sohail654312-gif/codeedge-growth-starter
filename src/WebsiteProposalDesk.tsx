@@ -3,7 +3,7 @@ import {Download,FilePenLine,ShieldCheck} from 'lucide-react';
 import type {SeoReport} from '../backend/seo-growth.mjs';
 import type {PremiumPlan} from '../backend/premium-content-intelligence.mjs';
 import {prepareWebsiteImprovementProposals} from '../backend/website-proposals.mjs';
-import {prepareOfflinePilotReviewPack} from '../backend/pilot-review-pack.mjs';
+import {prepareOfflinePilotReviewPack,restoreOfflinePilotCorrectionDrafts} from '../backend/pilot-review-pack.mjs';
 import './website-proposals.css';
 function offlineDownload(name:string,data:string){
  const href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
@@ -14,6 +14,7 @@ export default function WebsiteProposalDesk({seoReport,premiumPlan}:{
  seoReport:SeoReport;premiumPlan:PremiumPlan
 }){
  const [index,setIndex]=useState(0),[notes,setNotes]=useState<Record<string,string>>({});
+ const [restoreMessage,setRestoreMessage]=useState(''),[restoreError,setRestoreError]=useState('');
  const result=useMemo(()=>{
   try{return {data:prepareWebsiteImprovementProposals({seoReport,premiumPlan}),error:''};}
   catch(e){return {data:null,error:e instanceof Error?e.message:'Proposal not available.'};}
@@ -54,6 +55,31 @@ export default function WebsiteProposalDesk({seoReport,premiumPlan}:{
     <textarea rows={3} maxLength={600} value={correction} onChange={e=>p&&setNotes(previous=>({...previous,[draftKey(p)]:e.target.value}))}
      placeholder="For example: this service is only available within Manchester city limits."/></label>
    <p className="wpd-warning" role="status">{correctionDrafts.length} page correction draft(s) included in the offline pilot pack. Notes remain in this browser tab only; minimum 4 characters per note. Do not enter patient information.</p>
+   <label className="wpd-file">Restore correction notes from a saved offline review pack (.json)
+     <input type="file" accept=".json,application/json" onChange={async event=>{
+       const control=event.currentTarget,file=control.files?.[0];control.value='';
+       if(!file)return;
+       setRestoreMessage('');setRestoreError('');
+       if(file.size>262144){setRestoreError('Choose a JSON review pack smaller than 256 KB.');return;}
+       try{
+         const imported=restoreOfflinePilotCorrectionDrafts({
+           json:await file.text(),seoReport,premiumPlan
+         });
+         if(!window.confirm('Replace the current unsaved correction notes with the notes from this file?'))return;
+         const byId=new Map(pack.proposals.map(proposal=>[proposal.id,proposal]));
+         const next:Record<string,string>={};
+         for(const item of imported){
+           const proposal=byId.get(item.proposalId);
+           if(!proposal)throw Error('Review pack contains an unknown page.');
+           next[draftKey(proposal)]=item.note;
+         }
+         setNotes(next);
+         setRestoreMessage('Restored '+imported.length+' local correction note(s). Nothing was sent or approved.');
+       }catch(error){setRestoreError(error instanceof Error?error.message:'Unable to restore the review pack.');}
+     }}/>
+   </label>
+   {restoreMessage?<p role="status" className="wpd-warning">{restoreMessage}</p>:null}
+   {restoreError?<p role="alert" className="wpd-import-error">{restoreError}</p>:null}
    <div className="wpd-actions">
     <button type="button" onClick={()=>offlineDownload('codeedge-content-correction-draft.json',JSON.stringify({
       status:'local_correction_draft_not_submitted',workspaceId:pack.workspaceId,

@@ -21,3 +21,5 @@ export type OfflinePilotReviewPack={
 };
 export const PILOT_REVIEW_BOUNDARY:Record<string,unknown>;
 export function prepareOfflinePilotReviewPack(input:{seoReport:SeoReport;premiumPlan:PremiumPlan;correctionDrafts?:Array<{workspaceId:string;proposalId:string;note:string}>}):OfflinePilotReviewPack;
+
+export function restoreOfflinePilotCorrectionDrafts(input:{json:string;seoReport:SeoReport;premiumPlan:PremiumPlan}):Array<{workspaceId:string;proposalId:string;note:string}>;

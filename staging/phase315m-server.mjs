@@ -15,6 +15,7 @@ import {createBoundedShutdown} from './bounded-shutdown.mjs';
 import {readPhase315pConfig} from './phase315p-config.mjs';
 import {createPrivateWorkspaceOperations} from '../backend/phase315p-private-operations.mjs';
 import {loadPrivateUi,servePrivateUi} from './private-ui-assets.mjs';
+import {createPrivateObservability} from './private-observability.mjs';
 export async function startPhase315mStaging({env=process.env,evidence,checkProviderSession,
  poolFactory=opts=>new Pool(opts),fetchImpl=globalThis.fetch}={}){
  const enableOperations=env.GS315P_ACTIVATE!==undefined;
@@ -37,7 +38,9 @@ export async function startPhase315mStaging({env=process.env,evidence,checkProvi
   const runtime=await createPhase315mPrivateRuntime({issuerPool,gatewayPool,provider,operations,
    projectUrl:config.projectUrl,appOrigin:config.appOrigin,
    csrfSigningKey:readFileSync(config.csrfKeyPath),checkProviderSession,secureIngress:ingress});
+  const observability=createPrivateObservability();
   const handle=(req,res)=>{
+    observability.observe(req,res);
     // Public liveness does not validate authentication or expose tenant data.
     if(req.method==='GET'&&req.url==='/health'){
      res.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});

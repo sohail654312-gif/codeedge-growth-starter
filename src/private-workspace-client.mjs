@@ -43,6 +43,7 @@ export function createPrivateWorkspaceClient({origin=globalThis.location?.origin
    const result=await request('/v1/operations/workspaces');
    if(!Array.isArray(result?.workspaces)||result.workspaces.length>25||result.workspaces.some(w=>
     ! /^ws_[A-Za-z0-9_-]{8,128}$/.test(w?.workspaceId||'')||!['owner','agency_admin','staff','client'].includes(w.role)||typeof w.name!=='string'||w.name.length>90))throw new PrivateWorkspaceError(503);
+   if(result.sessionExpiresAt!==undefined&&(!Number.isFinite(Date.parse(result.sessionExpiresAt))||Date.parse(result.sessionExpiresAt)<=Date.now()||Date.parse(result.sessionExpiresAt)>Date.now()+1800000))throw new PrivateWorkspaceError(401);
    return result;
   },
   authorize:ws=>request('/v1/operations/authorize'+query(ws)),profile:ws=>request('/v1/operations/profile'+query(ws)),

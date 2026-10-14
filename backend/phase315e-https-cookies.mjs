@@ -235,8 +235,9 @@ export function createPrivateHttpsCookieHandler({bridge,authority,appOrigin,csrf
     const result=await operations.run({token,workspaceId:searchParams.get('workspaceId'),action,input,query:Object.fromEntries(searchParams)});
     return response(res,200,result);
    }catch(e){
-    const status=[400,403,404,409].includes(e?.status)?e.status:503;
-    return response(res,status,{error:status===409?'Version or idempotency conflict; refresh before saving.':status===503?'Private operation unavailable.':'Operation denied.'});
+    const status=[400,401,403,404,409].includes(e?.status)?e.status:503;
+    return response(res,status,{error:status===409?'Version or idempotency conflict; refresh before saving.':status===503?'Private operation unavailable.':'Operation denied.'},
+     {setCookies:status===401?[cookie(SESSION,'',{ttl:0}),cookie(CSRF,'',{httpOnly:false,ttl:0}),cookie(FLOW,'',{ttl:0})]:null});
    }
   }
   return response(res,404);

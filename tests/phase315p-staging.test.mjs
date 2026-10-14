@@ -30,6 +30,8 @@ test('private assets are exact-file, HTTPS/Host gated, no-store and deny script 
   assert.equal(servePrivateUi(req,res,config),true);assert.equal(out.status,200);assert.equal(out.headers['cache-control'],'private, no-store');
   assert.doesNotMatch(out.headers['content-security-policy'],/unsafe-inline|unsafe-eval/);
   assert.equal(servePrivateUi({...req,url:'/assets/../../private.html'},res,config),false);
+  assert.equal(servePrivateUi({...req,url:'/assets/../../dashboard'},res,config),false);
+  for(const url of ['/login?auth=failed','/dashboard?workspaceId=ws_fictional_A']){assert.equal(servePrivateUi({...req,url},res,config),true);assert.equal(out.status,200);}
   servePrivateUi({...req,headers:{host:'attacker.invalid'}},res,config);assert.equal(out.status,421);
   writeFileSync(join(dir,'assets','unexpected.html'),'<script>bad</script>');assert.throws(()=>loadPrivateUi(dir));
  }finally{rmSync(dir,{recursive:true,force:true});}

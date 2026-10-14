@@ -16,43 +16,50 @@ export function PrivateWorkspaceApp({client}:{client:PrivateClient}){
  const [cursors,setCursors]=useState<string[]>([]),[title,setTitle]=useState(''),[kind,setKind]=useState('Website update'),[notes,setNotes]=useState('');
  const [correction,setCorrection]=useState(''),[assignee,setAssignee]=useState(''),[due,setDue]=useState('');
  const [history,setHistory]=useState<Array<{id:string;action:string;target:string}>>([]);
- const pending=useRef(false),generation=useRef(0),keys=useRef(new Map<string,string>());
+ const [historyCursor,setHistoryCursor]=useState<string|null>(null),[expires,setExpires]=useState<number|null>(null);
+ const [memberId,setMemberId]=useState(''),[mediaId,setMediaId]=useState('');
+ const pending=useRef(false),generation=useRef(0),flight=useRef(0),keys=useRef(new Map<string,string>());
  const agency=['owner','agency_admin','staff'].includes(role),decider=['owner','client'].includes(role),assigner=['owner','agency_admin'].includes(role);
+ function clearScope(){setRole('');setRequests([]);setSelected(null);setHistory([]);setHistoryCursor(null);setProfile(empty);setProfileVersion(0);setCursor(null);setTab('Work');setCorrection('');setAssignee('');setDue('');setMemberId('');setMediaId('');}
+ function fail(e:unknown){clearScope();if((e as {status?:number})?.status===401){setSignedIn(false);setWorkspaces([]);setExpires(null);keys.current.clear();}setError(e instanceof Error?e.message:'Unable to complete the request.');}
  async function load(workspace:string,position='',status=filter){
-  const gen=++generation.current;setLoading(true);setError('');setSelected(null);
+  const gen=++generation.current;setLoading(true);setError('');clearScope();
   try{
    const authorization=await client.authorize(workspace);
    const [page,saved]=await Promise.all([client.list(workspace,{limit:'20',cursor:position,status}),client.profile(workspace)]);
    if(gen!==generation.current)return;
    setWs(workspace);setWorkspaceInput(workspace);setRole(authorization.role);setRequests(page.items);setCursor(page.nextCursor);
    setProfile(saved.fields||empty);setProfileVersion(saved.version);setSignedIn(true);
-  }catch(e){if(gen===generation.current){setRequests([]);setRole('');setProfile(empty);setError(e instanceof Error?e.message:'Unable to load workspace.');}}
+   if(saved.fields?.name)setWorkspaces(previous=>previous.map(w=>w.workspaceId===workspace?{...w,name:saved.fields!.name}:w));
+  }catch(e){if(gen===generation.current)fail(e);}
   finally{if(gen===generation.current)setLoading(false);}
  }
  useEffect(()=>{let active=true;
   async function start(){try{let available=await client.workspaces();
    if(!available.workspaces.length){await client.onboard();available=await client.workspaces();}
-   if(active){setWorkspaces(available.workspaces);await load(ws||available.workspaces[0].workspaceId);}}
-   catch(e){if(active){setLoading(false);setError(e instanceof Error?e.message:'Sign in to continue.');}}}
+   if(active){setWorkspaces(available.workspaces);if(available.sessionExpiresAt)setExpires(Date.parse(available.sessionExpiresAt));await load(ws||available.workspaces.find(w=>w.role==='owner')?.workspaceId||available.workspaces[0].workspaceId);}}
+   catch(e){if(active){setLoading(false);fail(e);if(new URLSearchParams(location.search).get('auth')==='failed')setError('The sign-in link could not be accepted. Request a new link.');}}}
   void start();return()=>{active=false;generation.current++;};
  // Initial client is a stable injected dependency; workspace changes reload explicitly.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[client]);
+ useEffect(()=>{if(expires===null)return;const check=()=>{if(!Number.isFinite(expires)||Date.now()>=expires){generation.current++;flight.current++;pending.current=false;clearScope();setSignedIn(false);setWorkspaces([]);setExpires(null);setLoading(false);setBusy(false);setTitle('');setNotes('');setNotice('');keys.current.clear();setError('Your session expired. Sign in to continue.');}};check();const timer=setInterval(check,1000);window.addEventListener('focus',check);document.addEventListener('visibilitychange',check);return()=>{clearInterval(timer);window.removeEventListener('focus',check);document.removeEventListener('visibilitychange',check);};},[expires]);
  async function perform(action:string,payload:unknown,fn:(key:string)=>Promise<unknown>){
   if(pending.current)return;pending.current=true;setBusy(true);setError('');setNotice('');
-  const binding=JSON.stringify({ws,action,payload});let key=keys.current.get(binding);
+  const gen=generation.current,operation=++flight.current,binding=JSON.stringify({ws,action,payload});let key=keys.current.get(binding);
   if(!key){key=crypto.randomUUID().replaceAll('-','');keys.current.set(binding,key);}
-  try{await fn(key);keys.current.delete(binding);setNotice('Changes saved.');await load(ws,cursors.at(-1)||'');}
-  catch(e){setError(e instanceof Error?e.message:'Unable to save. Retry the same action.');}
-  finally{pending.current=false;setBusy(false);}
+  try{await fn(key);if(gen!==generation.current)return;keys.current.delete(binding);setNotice('Changes saved.');await load(ws,cursors.at(-1)||'');}
+  catch(e){if(gen===generation.current){if([401,403].includes((e as {status?:number})?.status||0))fail(e);else setError(e instanceof Error?e.message:'Unable to save. Retry the same action.');}}
+  finally{if(operation===flight.current){pending.current=false;setBusy(false);}}
  }
  async function signIn(){if(pending.current)return;pending.current=true;setBusy(true);setError('');
   try{await client.login(email);setNotice('If eligible, check your email to continue.');}
   catch(e){setError(e instanceof Error?e.message:'Login unavailable.');}finally{pending.current=false;setBusy(false);}}
- async function logout(){setBusy(true);setError('');try{await client.logout();generation.current++;setSignedIn(false);setRole('');setRequests([]);setSelected(null);setHistory([]);setProfile(empty);keys.current.clear();setNotice('Signed out.');}
-  catch(e){setError(e instanceof Error?e.message:'Retry sign out.');}finally{setBusy(false);}}
- async function detail(r:PrivateRequest){setBusy(true);setError('');try{setSelected(await client.detail(ws,r.id));setAssignee(r.assignedTo||'');setDue(r.dueDate||'');setCorrection('');}
-  catch(e){setError(e instanceof Error?e.message:'Unable to load details.');}finally{setBusy(false);}}
+ async function logout(){if(pending.current)return;pending.current=true;setBusy(true);setError('');try{await client.logout();generation.current++;clearScope();setSignedIn(false);setExpires(null);setWorkspaces([]);setTitle('');setNotes('');keys.current.clear();setNotice('Signed out.');}
+  catch(e){if((e as {status?:number})?.status===401)fail(e);else setError(e instanceof Error?e.message:'Retry sign out.');}finally{pending.current=false;setBusy(false);}}
+ async function detail(r:PrivateRequest){const gen=generation.current,operation=++flight.current;setBusy(true);setError('');try{const value=await client.detail(ws,r.id);if(gen!==generation.current||operation!==flight.current)return;setSelected(value);setAssignee(value.assignedTo||'');setDue(value.dueDate||'');setCorrection('');}
+  catch(e){if(gen===generation.current)fail(e);}finally{if(gen===generation.current)setBusy(false);}}
+ async function activity(position=''){const gen=generation.current;setBusy(true);setError('');try{const value=await client.history(ws,{cursor:position});if(gen!==generation.current)return;setHistory(value.items);setHistoryCursor(value.nextCursor);}catch(e){if(gen===generation.current)fail(e);}finally{if(gen===generation.current)setBusy(false);}}
  const visible=requests.filter(r=>(r.title+' '+r.kind).toLowerCase().includes(search.toLowerCase()));
  return <div className="private-app"><header><a href="/dashboard" className="private-brand">Codeedge<span>Growth workspace</span></a>
   {signedIn&&<div><span className="private-role">{role.replace('_',' ')}</span><button disabled={busy} onClick={()=>void logout()}>Sign out</button></div>}</header>
@@ -62,12 +69,12 @@ export function PrivateWorkspaceApp({client}:{client:PrivateClient}){
     <form onSubmit={e=>{e.preventDefault();void signIn();}}><label>Email address<input type="email" autoComplete="email" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)}/></label>
      <button className="private-primary" disabled={busy||!email}>{busy?'Sending…':'Send sign-in link'}</button></form></section>:
    <><div className="private-heading"><div><h1>{profile.name||'Your growth workspace'}</h1><p>Review work before it moves forward.</p></div>
-    <form className="private-workspace" onSubmit={e=>{e.preventDefault();setCursors([]);void load(workspaceInput);}}><label>Workspace<select value={workspaceInput} onChange={e=>setWorkspaceInput(e.target.value)}>{workspaces.map(w=><option key={w.workspaceId} value={w.workspaceId}>{w.name}</option>)}</select></label><button disabled={busy||loading}>Open workspace</button></form></div>
-    <nav aria-label="Workspace sections">{['Work','Business profile','Activity','Growth tools'].filter(t=>t!=='Activity'||assigner).map(t=><button key={t} aria-current={tab===t?'page':undefined} onClick={()=>{
-     setTab(t);if(t==='Activity'){setBusy(true);client.history(ws).then(v=>setHistory(v.items)).catch(e=>setError(e.message)).finally(()=>setBusy(false));}
+    <form className="private-workspace" onSubmit={e=>{e.preventDefault();setCursors([]);setFilter('');setSearch('');setTitle('');setNotes('');void load(workspaceInput,'','');}}><label>Workspace<select disabled={busy||loading} value={workspaceInput} onChange={e=>setWorkspaceInput(e.target.value)}>{workspaces.map(w=><option key={w.workspaceId} value={w.workspaceId}>{w.name}</option>)}</select></label><button disabled={busy||loading}>Open workspace</button></form></div>
+    <nav aria-label="Workspace sections">{['Work','Business profile','Activity','Reports','Access and media','Growth tools'].filter(t=>t!=='Activity'||assigner).filter(t=>t!=='Access and media'||role==='owner').map(t=><button key={t} disabled={busy||loading||!role} aria-current={tab===t?'page':undefined} onClick={()=>{
+     setTab(t);if(t==='Activity')void activity();
     }}>{t}</button>)}</nav>
     <div aria-busy={busy||loading}>
-    {tab==='Work'&&<><section className="private-compose"><h2>Create a work request</h2><form onSubmit={e=>{e.preventDefault();const fields={title,kind,notes};void perform('create',fields,key=>client.createRequest(ws,fields,key));}}>
+    {tab==='Work'&&role&&<><section className="private-compose"><h2>Create a work request</h2><form onSubmit={e=>{e.preventDefault();const fields={title,kind,notes};void perform('create',fields,key=>client.createRequest(ws,fields,key));}}>
      <label>Title<input required maxLength={100} value={title} onChange={e=>setTitle(e.target.value)}/></label>
      <label>Type<select value={kind} onChange={e=>setKind(e.target.value)}>{['Website update','Social content','Local SEO','Other'].map(v=><option key={v}>{v}</option>)}</select></label>
      <label>Brief<textarea maxLength={600} rows={2} value={notes} onChange={e=>setNotes(e.target.value)}/></label>
@@ -91,11 +98,13 @@ export function PrivateWorkspaceApp({client}:{client:PrivateClient}){
       <h3>Correction history</h3>{selected.notesHistory?.length?<ul>{selected.notesHistory.map(n=><li key={n.id}>{n.note}</li>)}</ul>:<p>No correction notes yet.</p>}
      </section>}
     </>}
-    {tab==='Business profile'&&<section className="private-profile"><h2>Business profile</h2><form onSubmit={e=>{e.preventDefault();void perform('profile',{profile,profileVersion},key=>client.saveProfile(ws,profile,profileVersion,key));}}>
+    {tab==='Business profile'&&role&&<section className="private-profile"><h2>Business profile</h2><form onSubmit={e=>{e.preventDefault();void perform('profile',{profile,profileVersion},key=>client.saveProfile(ws,profile,profileVersion,key));}}>
      {([['name','Business name',90],['industry','Industry',60],['city','City',90],['website','Website',250],['goal','Growth goal',240]] as const).map(([field,label,max])=><label key={field}>{label}<input required={['name','industry','city'].includes(field)} type={field==='website'?'url':'text'} maxLength={max} value={profile[field]} onChange={e=>setProfile({...profile,[field]:e.target.value})}/></label>)}
      <button className="private-primary" disabled={busy||loading}>Save business profile</button></form></section>}
-    {tab==='Activity'&&<section><h2>Recent workspace activity</h2><p>Showing the latest authorized events.</p><ul className="private-activity">{history.map(h=><li key={h.id}><strong>{h.action.replaceAll('.',' ')}</strong><span>{h.target}</span></li>)}</ul></section>}
-    {tab==='Growth tools'&&<><p className="private-notice">Offline planning tools use clearly labelled fictional examples or extracts you supply. Google and publishing connections remain disabled.</p><SeoGrowthManager demo={false}/></>}
+    {tab==='Activity'&&assigner&&<section><h2>Recent workspace activity</h2><p>Showing one authorized page, newest first.</p><ul className="private-activity">{history.map(h=><li key={h.id}><strong>{h.action.replaceAll('.',' ')}</strong><span>{h.target}</span></li>)}</ul>{!history.length&&!busy&&<p>No activity yet.</p>}<button disabled={busy} onClick={()=>void activity()}>Latest activity</button><button disabled={busy||!historyCursor} onClick={()=>void activity(historyCursor||'')}>Load older activity</button></section>}
+    {tab==='Reports'&&role&&<section><h2>Work overview</h2><p>This summary covers the {requests.length} requests on the loaded page. It is not a workspace total or live provider report.</p><ul>{['Requested','In progress','Awaiting approval','Approved','Changes requested','Completed'].map(status=><li key={status}>{status}: {requests.filter(r=>r.status===status).length}</li>)}</ul></section>}
+    {tab==='Access and media'&&role==='owner'&&<section><h2>Access and media</h2><p>Use the exact member or media ID supplied by your agency. Revocation ends workspace access; media deletion queues storage cleanup. Provider invitations and uploads are disabled until their secure runtime is accepted.</p><form onSubmit={e=>{e.preventDefault();void perform('revokeMember',{memberId},key=>client.revokeMember(ws,memberId,key));}}><label>Member ID to revoke<input required pattern="[A-Za-z0-9_-]{8,128}" value={memberId} onChange={e=>setMemberId(e.target.value)}/></label><button disabled={busy||loading||!memberId}>Revoke member access</button></form><form onSubmit={e=>{e.preventDefault();void perform('deleteMedia',{mediaId},key=>client.deleteMedia(ws,mediaId,key));}}><label>Media ID to delete<input required pattern="[A-Za-z0-9_-]{1,128}" value={mediaId} onChange={e=>setMediaId(e.target.value)}/></label><button disabled={busy||loading||!mediaId}>Queue media deletion</button></form></section>}
+    {tab==='Growth tools'&&role&&<><p className="private-notice">Offline planning tools use clearly labelled fictional examples or extracts you supply. Google and publishing connections remain disabled.</p><SeoGrowthManager demo={false}/></>}
     </div><footer>Content approvals track the reviewed version. External publishing and payments remain disabled.</footer>
    </>}
   </main></div>;

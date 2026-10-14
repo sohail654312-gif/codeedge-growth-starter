@@ -4,7 +4,7 @@ export type PrivateProfile={name:string;industry:string;city:string;website:stri
 export type PrivatePage={items:PrivateRequest[];nextCursor:string|null};
 export type PrivateClient={
  login(email:string):Promise<unknown>;logout():Promise<unknown>;onboard():Promise<{workspaceId:string;role:string}>;
- workspaces():Promise<{workspaces:Array<{workspaceId:string;role:string;name:string}>}>;
+ workspaces():Promise<{workspaces:Array<{workspaceId:string;role:string;name:string}>;sessionExpiresAt?:string}>;
  authorize(ws:string):Promise<{workspaceId:string;role:string}>;profile(ws:string):Promise<{fields:PrivateProfile|null;version:number}>;
  list(ws:string,query?:Record<string,string>):Promise<PrivatePage>;detail(ws:string,id:string):Promise<PrivateRequest>;
  history(ws:string,query?:Record<string,string>):Promise<{items:Array<{id:string;action:string;target:string}>;nextCursor:string|null}>;

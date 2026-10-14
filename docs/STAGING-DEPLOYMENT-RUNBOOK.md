@@ -106,10 +106,18 @@ before choosing capacity. Multiple instances multiply six-connection budgets;
 SQL locks/receipts coordinate work, while the local sandbox journal does not offer
 distributed worker coordination. Do not enable it as multi-instance production storage.
 
-No monthly price, Free-plan sufficiency, production throughput or backup RPO/RTO is
-verified. Obtain a current plan/host cost quote and exact spending approval before
+Current public pricing and explicit resource/cost assumptions are recorded in
+`FINAL-CODEX-TO-CHATGPT-HANDOFF.md`; no host quote, Free-plan sufficiency,
+production throughput or backup RPO/RTO is accepted. Obtain an exact spending approval before
 provisioning. Approve retention for login flows, receipts, audit and media tombstones;
 no destructive retention cleanup is enabled by this package.
+
+`private-observability.mjs` emits only fixed route category, status, duration and
+random request correlation ID on completed responses. Bodies, callback query
+strings, cookies, identities, SQL and raw errors are excluded. Configure the
+approved log destination and retention outside source. `monitoring.template.json`
+contains proposed health/readiness cadence and alert thresholds; it neither
+provisions monitoring nor contacts an incident recipient.
 
 Backup/export and restore are part of the approved database cutover, with recorded
 restore drill and incident ownership. On failure close ingress and run P/M deny-all

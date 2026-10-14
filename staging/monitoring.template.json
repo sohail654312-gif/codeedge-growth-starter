@@ -1,0 +1,12 @@
+{
+  "status": "REVIEW_ONLY_NOT_ACTIVATED",
+  "endpointOrigin": "OWNER_APPROVED_HTTPS_ORIGIN_REQUIRED",
+  "liveness": {"path": "/health", "intervalSeconds": 30, "failuresBeforeAlert": 3},
+  "readiness": {"path": "/ready", "intervalSeconds": 60, "requiresTrustedIngress": true, "provesProviderAcceptance": false},
+  "logEvent": "private_http_completed",
+  "allowedLogFields": ["event", "requestId", "route", "status", "durationMs"],
+  "alerts": {"http5xxRatio": 0.05, "windowMinutes": 5, "minimumRequests": 20, "callbackFailuresRequireInvestigation": true, "poolWaitAndClockSkewRequireHostMetrics": true},
+  "retentionDaysProposed": 7,
+  "ownerMustApprove": ["monitoring destination", "retention", "incident recipient", "host metrics and abuse limits", "budget"],
+  "sensitiveFieldsForbidden": ["request body", "query string", "cookie", "token", "identity", "SQL", "database URL", "raw error"]
+}

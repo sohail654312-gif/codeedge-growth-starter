@@ -104,13 +104,14 @@ export async function createPrivateWorkspaceOperations({pool,checkProviderSessio
  }
  async function transaction(token,fn){
   if(typeof token!=='string'||!TOKEN.test(token))denied();
-  let c,started=false,timer;const controller=new AbortController();
+  let c,started=false,timer,sessionVerified=false;const controller=new AbortController();
   try{
    c=await pool.connect();await c.query('BEGIN ISOLATION LEVEL READ COMMITTED');started=true;
    await c.query("SET LOCAL statement_timeout='4s'");await c.query("SET LOCAL lock_timeout='2s'");
    await c.query("SET LOCAL idle_in_transaction_session_timeout='6s'");
    const context=(await c.query('SELECT * FROM growth_starter_private.session_context($1)',[token])).rows?.[0];
-   if(!context)denied();
+   if(!context)throw new DomainError('Sign in to continue.',401);
+   sessionVerified=true;
    const facts=await Promise.race([Promise.resolve().then(()=>checkProviderSession({userId:context.user_id,sessionId:context.provider_session_id,signal:controller.signal})),
     new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error()),3000);})]);
    const t=Math.floor(now()/1000);
@@ -118,11 +119,11 @@ export async function createPrivateWorkspaceOperations({pool,checkProviderSessio
     !Number.isSafeInteger(facts.expiresAt)||facts.expiresAt<=t)denied();
    clearTimeout(timer);
    // Credentials stay inside this closure; callers receive only the result.
-   const value=await fn(c,context.user_id);await c.query('COMMIT');started=false;return value;
+   const value=await fn(c,context.user_id,context);await c.query('COMMIT');started=false;return value;
   }catch(e){
    if(started)await c.query('ROLLBACK').catch(()=>{});
    if(e instanceof DomainError)throw e;
-   if(e?.code==='28000')denied();
+   if(e?.code==='28000'){if(!sessionVerified)throw new DomainError('Sign in to continue.',401);denied();}
    if(e?.code==='23505')throw new DomainError('Version or idempotency conflict; refresh before saving.',409);
    if(e?.code==='P0002')throw new DomainError('Record not found.',404);
    if(['22023','22007','22008','23514'].includes(e?.code))throw new DomainError('Invalid operation input.');
@@ -132,11 +133,11 @@ export async function createPrivateWorkspaceOperations({pool,checkProviderSessio
  const scalar=async(c,sql,args)=>(await c.query(sql,args)).rows?.[0]?.result;
  async function run({token,workspaceId,action,input={},query={}}={}){
   if(!['onboard','workspaces'].includes(action)&&(typeof workspaceId!=='string'||!WS.test(workspaceId)))throw new DomainError('Invalid workspace.');
-  return transaction(token,async(c,actor)=>{
+  return transaction(token,async(c,actor,context)=>{
    const p=[token,workspaceId],k=()=>key(input.idempotencyKey),id=()=>validRecordId(input.id);
    switch(action){
     case 'onboard':return scalar(c,'SELECT growth_starter_private.ops_onboard($1) AS result',[token]);
-    case 'workspaces':return scalar(c,'SELECT growth_starter_private.ops_workspaces($1) AS result',[token]);
+    case 'workspaces':return {...await scalar(c,'SELECT growth_starter_private.ops_workspaces($1) AS result',[token]),sessionExpiresAt:new Date(context.expires_at).toISOString()};
     case 'authorize':return scalar(c,'SELECT growth_starter_private.ops_authorize($1,$2) AS result',p);
     case 'profile':return scalar(c,'SELECT growth_starter_private.ops_profile_read($1,$2) AS result',p);
     case 'saveProfile':return scalar(c,'SELECT growth_starter_private.ops_profile_save($1,$2,$3,$4,$5) AS result',[...p,k(),profileInput(input.fields),version(input.version)]);

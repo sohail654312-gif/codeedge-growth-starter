@@ -179,7 +179,7 @@ test('P integrated PKCE callback cookies -> restricted operation -> real Codeedg
   assert.equal((await send(path,{jar:binding})).headers.location,'/login?auth=failed');
   assert.equal((await send('/v1/operations/requests?workspaceId='+WB,{jar:cookies})).status,403);
   assert.equal((await send('/auth/logout',{method:'POST',jar:cookies,csrf})).status,204);
-  assert.equal((await send('/v1/operations/requests?workspaceId='+WA,{jar:cookies})).status,403);
+  assert.equal((await send('/v1/operations/requests?workspaceId='+WA,{jar:cookies})).status,401);
  }finally{for(const p of pools)await p.end();for(const r of ['gs315m_issuer','gs315k_gateway'])await setup.query('ALTER ROLE '+r+' NOLOGIN');}
 });
 test('P transaction ordering: in-flight member operation completes before revocation; subsequent replay denies',async()=>{
@@ -191,9 +191,9 @@ test('P transaction ordering: in-flight member operation completes before revoca
  await assert.rejects(call(C,'list'),denied);
  // Committed Codeedge revocation and expiry apply even while provider is active.
  await setup.query('UPDATE growth_starter_private.codeedge_sessions SET expires_at=now()-interval \'1 second\' WHERE id=$1',[sessions.get(B).split('.')[1]]);
- await assert.rejects(call(B,'authorize',{}, {},WB),denied);
+ await assert.rejects(call(B,'authorize',{}, {},WB),e=>e.status===401);
  await setup.query('UPDATE growth_starter_private.codeedge_sessions SET revoked_at=now() WHERE id=$1',[sessions.get(D).split('.')[1]]);
- await assert.rejects(call(D,'list'),denied);
+ await assert.rejects(call(D,'list'),e=>e.status===401);
 });
 test('P reproducible restricted-workflow timing and deny-all recovery for existing pooled connections',async()=>{
  const samples=[];for(let i=0;i<10;i++){const start=performance.now();await call(A,'list');samples.push(performance.now()-start);}

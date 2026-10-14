@@ -14,9 +14,11 @@ export function loadPrivateUi(root=resolve('dist/private')){
  return files;
 }
 export function servePrivateUi(req,res,{files,secureIngress,appOrigin}){
- if(!files.has(req.url)||req.method!=='GET')return false;
+ if(req.method!=='GET'||typeof req.url!=='string'||req.url.length>1800)return false;
+ let url;try{url=new URL(req.url,appOrigin);}catch{return false;}
+ if(url.origin!==appOrigin||url.pathname!==req.url.split('?')[0]||!files.has(url.pathname))return false;
  if(secureIngress(req)!==true||req.headers.host!==new URL(appOrigin).host){res.writeHead(421);res.end();return true;}
- const asset=files.get(req.url);
+ const asset=files.get(url.pathname);
  res.writeHead(200,{'content-type':asset.type,'content-length':asset.body.length,'cache-control':'private, no-store',
   'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
   'x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','strict-transport-security':'max-age=31536000'});

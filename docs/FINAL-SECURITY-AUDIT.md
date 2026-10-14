@@ -37,7 +37,7 @@ Dependency facts were checked against the current advisory records:
 | MEDIUM | Per-workspace exclusive lock limits concurrency; retention/capacity unknown | Operations acceptance. Measure representative load; preserve lock order and deny on deadlines; approve retention before cleanup |
 | MEDIUM | In-memory UI retry keys do not persist through reload; old full PG suites need a fresh database | Documented operating limits. Inspect requests after ambiguous reload; use fresh disposable clusters, not a populated previous run |
 | MEDIUM | Sandbox journal is local, not distributed production tenancy | Unconnected integration. No live/distributed scheduler; external adapters remain disabled |
-| LOW | Accessibility verified by automated fixtures only | Independent keyboard/screen-reader and complete hosted-flow review remains required |
+| LOW | Accessibility verified automatically on fixtures and the built HTTPS/PG application | Independent human screen-reader and complete hosted-flow review remains required |
 | INFORMATIONAL | PUBLIC TEMP/extension privileges are ambient PostgreSQL capabilities | Do not claim zero capabilities; audit extensions on actual host, qualified objects and last pg_temp search path |
 | INFORMATIONAL | Supabase advisor returned four RLS-enabled/no-policy notices on audit/invitation/media/outbox tables | Expected historical default-deny; do not add public allow policies to silence notices. [Advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) |
 
@@ -70,6 +70,17 @@ Recovery: private EXECUTE/USAGE and LOGIN lockdown affects existing pooled conne
 keeps records and legacy deny-all; backup restore and hosted recovery still need acceptance.
 
 ## Evidence limits
+
+Final assignment review additionally fixed scope/history/detail response races,
+idle session-screen erasure, unusable stale cookies after SQL expiry, callback
+error URL serving and nondeterministic initial workspace selection. Owner
+revocation/media queue and scoped reports/history paging are connected in the UI.
+The actual built app now has six HTTPS/PG browser journeys across mobile/desktop,
+including all four roles, owner-to-client workspace switching, review/corrections,
+reports, logout, denial, provider failure and new-owner onboarding. All use
+fictional users and synthetic provider responses, never live Supabase acceptance.
+Metadata-only runtime logs and a review-only monitoring template were added;
+regressions prove callback secrets, cookies, bodies, identities and SQL are omitted.
 
 Local source tests and PG17 execute fictional A/B/C/D, including actual restricted
 database logins and cookie transport. Provider APIs are synthetic, so no real

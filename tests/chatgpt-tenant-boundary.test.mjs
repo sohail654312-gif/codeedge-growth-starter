@@ -19,6 +19,8 @@ const baseline=()=>({
  .map(name=>({name,securityDefiner:true,owner:'postgres',readerExecute:true,
   authenticatedExecute:false,anonExecute:false})),
  authenticatedSchemaUsage:true,authenticatedColumnSelectCount:15,
+ anonSchemaUsage:false,serviceRoleSchemaUsage:false,
+ anonColumnSelectCount:0,serviceRoleColumnSelectCount:0,publicExecuteFunctionCount:0,
  runtimeCanSetLegacyReader:true,privateSchemaPresent:false,
  dashboardExposureVerified:false,signedHostedTenantTestsPassed:false
 });
@@ -51,6 +53,19 @@ test('unexpected/missing table and weakened or expanded policy never look accept
   ),JSON.stringify(s));}
 });
 
+test('anonymous, service-role and PUBLIC function grant drift is flagged',()=>{
+ for(const [key,value,code] of [
+  ['anonSchemaUsage',true,'anonymous_role_has_growth_access'],
+  ['anonColumnSelectCount',1,'anonymous_role_has_growth_access'],
+  ['serviceRoleSchemaUsage',true,'service_role_has_growth_access'],
+  ['serviceRoleColumnSelectCount',1,'service_role_has_growth_access'],
+  ['publicExecuteFunctionCount',1,'public_function_execute_grants']
+ ]){
+  const s=baseline();s[key]=value;
+  assert.ok(problems(s).includes(code),key);
+ }
+});
+
 test('a newly callable privileged function or extra function is flagged',()=>{
  for(const change of [
   s=>{s.legacyFunctions[0].authenticatedExecute=true;},
@@ -67,6 +82,8 @@ test('malformed, missing or forged audit evidence fails closed',()=>{
  for(const broken of [null,{},[],{...baseline(),tables:null},
   {...baseline(),authenticatedColumnSelectCount:-1},
   {...baseline(),authenticatedSchemaUsage:'false'},
+  {...baseline(),anonColumnSelectCount:'0'},
+  {...baseline(),publicExecuteFunctionCount:-1},
   {...baseline(),runtimeCanSetLegacyReader:null},
   {...baseline(),policies:[baseline().policies[0],baseline().policies[0]]}
  ])assert.throws(()=>assessIndependentTenantCatalog(broken),/Untrusted or incomplete/);
@@ -80,6 +97,8 @@ test('even a hypothetically clean catalog never self-certifies release',()=>{
  s.tables=s.tables.map(t=>({...t,forceRls:true}));
  s.legacyFunctions=[];s.authenticatedSchemaUsage=false;s.authenticatedColumnSelectCount=0;
  s.runtimeCanSetLegacyReader=false;s.privateSchemaPresent=true;
+ s.anonSchemaUsage=false;s.serviceRoleSchemaUsage=false;
+ s.anonColumnSelectCount=0;s.serviceRoleColumnSelectCount=0;s.publicExecuteFunctionCount=0;
  s.dashboardExposureVerified=true;s.signedHostedTenantTestsPassed=true;
  const a=assessIndependentTenantCatalog(s);
  assert.equal(a.classification,'catalog_review_only');

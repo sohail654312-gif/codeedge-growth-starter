@@ -1,0 +1,26 @@
+name: Growth Starter independent tenant audit
+on:
+  push:
+    branches:
+      - engineering/chatgpt-tenant-audit-20261014
+permissions:
+  contents: read
+jobs:
+  tenant-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check independent audit module and tests
+        run: |
+          node --check backend/independent-tenant-audit.mjs
+          node --check tests/chatgpt-tenant-boundary.test.mjs
+      - name: Run isolated negative tenant-permission regression tests
+        run: |
+          node --test tests/chatgpt-tenant-boundary.test.mjs tests/pg-rls-catalog.test.mjs tests/phase315j-cutover-readiness.test.mjs tests/phase315n-authority.test.mjs
+      - name: Run full source regression suite without hosted credentials
+        run: |
+          node --test tests/*.test.mjs backend/pg-session-authority.test.mjs

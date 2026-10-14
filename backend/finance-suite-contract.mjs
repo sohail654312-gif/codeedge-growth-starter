@@ -54,9 +54,10 @@ export function createSyntheticFinanceConnector({
    try{data=await readSyntheticFinance(scoped);}catch{deny();}
    if(!data||data.financeTenantId!==scoped.financeTenantId||
       data.financeLegalEntityId!==scoped.financeLegalEntityId||
-      data.month!==month||!/^[A-Z]{3}$/.test(data.currency||'')||
-      !DECIMAL.test(data.receivables||'')||
-      !DECIMAL.test(data.payables||'')||
+      data.month!==month||
+      typeof data.currency!=='string'||!/^[A-Z]{3}$/.test(data.currency)||
+      typeof data.receivables!=='string'||!DECIMAL.test(data.receivables)||
+      typeof data.payables!=='string'||!DECIMAL.test(data.payables)||
       !['not_verified','pending_human_review'].includes(data.taxReviewStatus))deny();
    return Object.freeze({
     version:FINANCE_INTEGRATION_CONTRACT.version,workspaceId,month,

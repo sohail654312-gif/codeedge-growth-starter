@@ -50,8 +50,8 @@ export default function WorkProgress({requests,demo,role,onNewRequest,onCorrecti
     </div>
     {requests.length>0&&<div className='work-filters'>
       <label>Search loaded requests<input type='search' value={search} maxLength={100} onChange={e=>{setSearch(e.target.value);setPage(0);}}/></label>
-      <label>Status<select value={filter} onChange={e=>{setFilter(e.target.value);setPage(0);}}><option>All</option>{[...steps,'Changes requested'].map(status=><option key={status}>{status}</option>)}</select></label>
-      <label>Sort<select value={sort} onChange={e=>{setSort(e.target.value);setPage(0);}}><option value='newest'>Newest first</option><option value='title'>Title</option></select></label>
+      <label>Status<select aria-label='Status' value={filter} onChange={e=>{setFilter(e.target.value);setPage(0);}}><option>All</option>{[...steps,'Changes requested'].map(status=><option key={status}>{status}</option>)}</select></label>
+      <label>Sort<select aria-label='Sort' value={sort} onChange={e=>{setSort(e.target.value);setPage(0);}}><option value='newest'>Newest first</option><option value='title'>Title</option></select></label>
     </div>}
     {error&&<p className='work-error' role='alert'>{error}</p>}
     {requests.length===0?<div className='work-empty'><ClipboardCheck size={25}/><strong>Nothing in the queue yet</strong>

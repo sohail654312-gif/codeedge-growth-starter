@@ -147,3 +147,8 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Disposable QA evidence, never application data or deployment configuration.
+work/
+test-results/
+playwright-report/

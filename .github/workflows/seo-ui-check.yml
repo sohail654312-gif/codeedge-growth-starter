@@ -1,0 +1,128 @@
+name: Growth Starter offline SEO UI typecheck
+on:
+  push:
+    branches: [engineering/phase2-core-security]
+    # All four acceptance workflows must run on every engineering revision.
+    # Avoid a green backend SHA whose offline UI check was silently skipped.
+    paths:
+      - '**'
+      - 'src/SeoGrowthManager.tsx'
+      - 'src/PremiumContentPanel.tsx'
+      - 'src/WebsiteProposalDesk.tsx'
+      - 'src/website-proposals.css'
+      - 'backend/website-proposals.*'
+      - 'backend/pilot-review-*.mjs'
+      - 'backend/pilot-review-*.d.mts'
+      - 'tests/pilot-review-pack.test.mjs'
+      - 'tests/website-proposals.test.mjs tests/pilot-review-pack.test.mjs'
+      - 'src/premium-content.css'
+      - 'backend/premium-content-intelligence.*'
+      - 'backend/premium-content-demo.mjs'
+      - 'tests/premium-content-intelligence.test.mjs'
+      - 'src/SearchPerformancePanel.tsx'
+      - 'src/seo-search-data.css'
+      - 'backend/search-*.mjs'
+      - 'backend/search-*.d.mts'
+      - 'backend/seo-search-data.*'
+      - 'tests/seo-search-data.test.mjs'
+      - 'src/seo-growth.css'
+      - 'backend/seo-*.mjs'
+      - 'backend/seo-*.d.mts'
+      - 'tsconfig.seo.json'
+      - '.github/workflows/seo-ui-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/SeoGrowthManager.tsx'
+      - 'src/PremiumContentPanel.tsx'
+      - 'src/WebsiteProposalDesk.tsx'
+      - 'src/website-proposals.css'
+      - 'backend/website-proposals.*'
+      - 'backend/pilot-review-*.mjs'
+      - 'backend/pilot-review-*.d.mts'
+      - 'tests/pilot-review-pack.test.mjs'
+      - 'tests/website-proposals.test.mjs'
+      - 'src/premium-content.css'
+      - 'backend/premium-content-intelligence.*'
+      - 'backend/premium-content-demo.mjs'
+      - 'tests/premium-content-intelligence.test.mjs'
+      - 'src/SearchPerformancePanel.tsx'
+      - 'src/seo-search-data.css'
+      - 'backend/search-*.mjs'
+      - 'backend/search-*.d.mts'
+      - 'backend/seo-search-data.*'
+      - 'tests/seo-search-data.test.mjs'
+      - 'src/seo-growth.css'
+      - 'backend/seo-*.mjs'
+      - 'backend/seo-*.d.mts'
+      - 'tsconfig.seo.json'
+      - '.github/workflows/seo-ui-check.yml'
+permissions:
+  contents: read
+jobs:
+  seo-ui-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: gs_test
+          POSTGRES_PASSWORD: ephemeral_browser_qa_only
+          POSTGRES_DB: gs_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U gs_test -d gs_test"
+          --health-interval 5s --health-timeout 5s --health-retries 8
+    env:
+      TEST_DATABASE_URL: postgres://gs_test:ephemeral_browser_qa_only@localhost:5432/gs_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned frontend framework and TS dependencies from package manifest
+        run: npm ci --ignore-scripts --no-fund
+      - name: Typecheck SEO Growth Manager UI in isolation
+        run: |
+          npx tsc --project tsconfig.seo.json --noEmit
+          npm run typecheck:private
+          npm run build:private
+      - name: Validate offline SEO domain and fixture scripts
+        run: |
+          node --check backend/seo-growth.mjs
+          node --check backend/seo-fixtures.mjs
+          node --check backend/seo-demo.mjs
+          node --check backend/seo-search-data.mjs
+          node --check backend/search-demo.mjs
+          node --check backend/premium-content-intelligence.mjs
+          node --check backend/premium-content-demo.mjs
+          node --check backend/website-proposals.mjs
+          node --check backend/pilot-review-pack.mjs
+          node --check backend/pilot-review-demo.mjs
+          node --test tests/seo-growth.test.mjs tests/seo-search-data.test.mjs tests/premium-content-intelligence.test.mjs tests/website-proposals.test.mjs
+      - name: Install and audit pinned isolated browser QA dependencies
+        run: |
+          npm ci --prefix tests/ui --ignore-scripts --no-fund
+          npm audit --prefix tests/ui --audit-level=high
+      - name: Install disposable Chromium browser
+        working-directory: tests/ui
+        run: npx playwright install --with-deps chromium
+      - name: Mobile, desktop and accessibility regression checks
+        working-directory: tests/ui
+        run: npm test
+      - name: Actual built HTTPS application and restricted PostgreSQL journey
+        working-directory: tests/ui
+        run: npx playwright test --config playwright.integrated.config.mjs
+      - name: Save browser regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-browser-qa
+          path: |
+            work/phase315o-browser-results.json
+            work/final-integrated-browser-results.json
+            tests/ui/test-results/
+          if-no-files-found: warn

@@ -1,0 +1,51 @@
+name: Growth Starter staging supply-chain
+on:
+  push:
+    branches: [engineering/phase2-core-security]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  staging-supply-chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reproducible staging dependency installation
+        working-directory: staging
+        run: npm ci --ignore-scripts --no-fund
+      - name: Audit runtime dependencies
+        working-directory: staging
+        run: npm audit --omit=dev --audit-level=high
+      - name: Audit locked source and private UI dependencies
+        run: |
+          npm ci --ignore-scripts --no-fund
+          npm audit --audit-level=high
+          node scripts/phase315p-migration-bundle.mjs
+      - name: Staging syntax and TLS configuration regressions
+        run: |
+          node --check staging/server.mjs
+          node --check staging/config.mjs
+          node --check staging/phase315m-config.mjs
+          node --check staging/phase315m-server.mjs
+          node --check staging/phase315m-bootstrap.mjs
+          node --check backend/phase315m-private-runtime.mjs
+          node --check staging/hosted-acceptance.mjs
+          node --check backend/supabase-staging-identity.mjs
+          node --check backend/staging-supabase-gateway.mjs
+          node --test tests/staging-config.test.mjs tests/supabase-staging-identity.test.mjs tests/hosted-acceptance.test.mjs
+      - name: Build isolated portable gateway package without credentials
+        run: docker build -f staging/Dockerfile.phase315m -t growth-starter-private-review .
+      - name: Verify package refuses unapproved startup
+        shell: bash
+        run: |
+          set +e
+          docker run --rm growth-starter-private-review > startup.log 2>&1
+          result=$?
+          set -e
+          test "$result" -eq 1
+          grep -F 'Private staging startup blocked: approved prerequisites unavailable.' startup.log

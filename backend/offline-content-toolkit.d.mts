@@ -1,0 +1,13 @@
+import type {SeoReport} from './seo-growth.mjs';
+import type {SearchAnalysis} from './seo-search-data.mjs';
+import type {PremiumPlan} from './premium-content-intelligence.mjs';
+export type ContentToolkit={version:string;workspaceId:string;strategy:PremiumPlan;schemaDrafts:Record<string,unknown>[];
+ duplicates:{pairs:Array<{pages:string[];similarity:number;review:string}>;comparedPages:number;truncatedPages:string[];method:string;liveCrawl:false};
+ calendar:Array<{id:string;date:string;channel:string;title:string;targetPage:string;priority:string;status:string;evidence:string;publishEnabled:false}>;
+ tasks:Array<{id:string;url:string;priority:string;action:string;why:string;status:string;evidence:string}>;
+ schemaStatus:string;approval:string;externalActionsEnabled:false;limitations:string[]};
+export function buildOfflineContentToolkit(input:{seoReport:SeoReport;searchAnalysis?:SearchAnalysis|null;startDate?:string;
+ confirmedFaq?:Array<{workspaceId:string;url:string;question:string;answer:string;visibleConfirmed:true;accuracyConfirmed:true}>}):ContentToolkit;
+export function validateStructuredData(document:unknown,options:{website:string}):{valid:boolean;issues:string[];scope:string};
+export function serializeStructuredData(document:unknown):string;
+export function detectDuplicateContent(input:{workspaceId:string;website:string;pages:Array<{workspaceId:string;url:string;text:string;source:'supplied_extract'}>;threshold?:number}):ContentToolkit['duplicates'];

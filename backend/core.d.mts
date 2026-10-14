@@ -1,0 +1,24 @@
+export type Role = 'owner'|'agency_admin'|'staff'|'client';
+export type Action = 'overview:read'|'profile:write'|'enquiry:create'|'enquiry:update'|'request:create'|'request:review'|'request:decide'|'asset:upload'|'asset:delete'|'members:manage';
+export declare const ROLES: readonly Role[];
+export declare const ACTIONS: readonly Action[];
+export declare class DomainError extends Error {status: number;constructor(message:string,status?:number)}
+export declare function textField(input:unknown,label:string,max?:number,required?:boolean): string;
+export declare function objectBody(body:unknown): Record<string,unknown>;
+export declare function enumField(input:unknown,label:string,choices: readonly string[]): string;
+export declare function validatedWebsite(input:unknown): string;
+export declare function profileInput(body:unknown): {name:string;industry:string;city:string;website:string;goal:string};
+export declare function enquiryInput(body:unknown): {name:string;service:string;channel:string};
+export declare function requestInput(body:unknown): {title:string;kind:string;notes:string};
+export declare function statusInput(body:unknown): string;
+export declare function ownerWorkspaceId(userId:string):string;
+export declare function tableFor(kind:string,ownerUserId:string):string;
+export declare function authorize(role:Role,action:Action):true;
+export declare function requestedWorkspace(ctx:{query?:Record<string,unknown>;body?:unknown}):string|null;
+export declare function validGrant(grant:unknown,uid:string,requested:string):boolean;
+export declare function resolveWorkspace(ctx:{user?:{userId:string};query?:Record<string,unknown>;body?:unknown},db:{list(table:string,options:{limit:number}):Promise<{items:Array<Record<string,any>>}>},action:Action,trustedMembership?:{capabilities:{authoritativeRead:boolean};authorize:(args:{userId:string;workspaceId:string})=>Promise<unknown>}):Promise<{workspaceId:string;ownerUserId:string;role:Role}>;
+export declare function pageArgs(query?:Record<string,string>):{limit:number;nextToken?:string};
+export declare function validateImageUpload(body:unknown):{filename:string;mime:string;base64:string;extension:string;size:number};
+export declare function reviewRequestTransition(current:string,desired:string,role:Role):string;
+export declare function clientRequestDecision(current:string,decision:unknown,role:Role):string;
+export declare function validRecordId(id:unknown):string;

@@ -1,0 +1,22 @@
+# Provider-neutral Node 22 package. No deployment, host or secret is assumed.
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS private-ui
+WORKDIR /build
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --no-fund
+COPY src ./src
+COPY backend ./backend
+COPY private.html vite.private.config.mjs postcss.config.js ./
+RUN npm run build:private
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+WORKDIR /app
+COPY staging/package.json staging/package-lock.json ./staging/
+RUN cd staging && npm ci --omit=dev --ignore-scripts --no-fund
+COPY --chown=node:node backend ./backend
+COPY --chown=node:node staging ./staging
+COPY --from=private-ui --chown=node:node /build/dist/private ./dist/private
+USER node
+ENV PORT=8787 GS315M_INGRESS_MODE=managed_https
+EXPOSE 8787
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+ CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node","staging/phase315m-bootstrap.mjs"]

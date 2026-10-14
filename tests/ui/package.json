@@ -1,0 +1,7 @@
+{
+ "name":"growth-starter-isolated-ui-qa",
+ "private":true,
+ "type":"module",
+ "scripts":{"pretest":"node prepare.mjs","test":"playwright test"},
+ "devDependencies":{"@playwright/test":"1.64.0","@axe-core/playwright":"4.13.0"}
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Supabase — Growth Starter"
+  short_description: "Review Supabase authentication, RLS and secure data access"
+  default_prompt: "Use $supabase to review Growth Starter's existing security design on the current frozen SHA, read-only, with evidence and no changes."
+policy:
+  allow_implicit_invocation: false

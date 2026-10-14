@@ -1,0 +1,565 @@
+{
+  "columns": [
+    {
+      "type": "bigint",
+      "table": "audit_events",
+      "column": "id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "audit_events",
+      "column": "workspace_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "audit_events",
+      "column": "actor_user_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "audit_events",
+      "column": "action",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "audit_events",
+      "column": "target",
+      "notNull": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "audit_events",
+      "column": "happened_at",
+      "notNull": true
+    },
+    {
+      "type": "uuid",
+      "table": "invitations",
+      "column": "id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "invitations",
+      "column": "workspace_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "invitations",
+      "column": "email",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "invitations",
+      "column": "role",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "invitations",
+      "column": "secret_digest",
+      "notNull": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "invitations",
+      "column": "expires_at",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "invitations",
+      "column": "state",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "invitations",
+      "column": "created_by",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "invitations",
+      "column": "accepted_by",
+      "notNull": false
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "invitations",
+      "column": "accepted_at",
+      "notNull": false
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "invitations",
+      "column": "created_at",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media",
+      "column": "workspace_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media",
+      "column": "id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media",
+      "column": "storage_key",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media",
+      "column": "filename",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media",
+      "column": "content_type",
+      "notNull": true
+    },
+    {
+      "type": "boolean",
+      "table": "media",
+      "column": "declared_rights",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media",
+      "column": "consent_state",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media",
+      "column": "scan_state",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media",
+      "column": "lifecycle",
+      "notNull": true
+    },
+    {
+      "type": "integer",
+      "table": "media",
+      "column": "size_bytes",
+      "notNull": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "media",
+      "column": "created_at",
+      "notNull": true
+    },
+    {
+      "type": "bigint",
+      "table": "media_delete_outbox",
+      "column": "id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media_delete_outbox",
+      "column": "workspace_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media_delete_outbox",
+      "column": "media_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media_delete_outbox",
+      "column": "storage_key",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "media_delete_outbox",
+      "column": "state",
+      "notNull": true
+    },
+    {
+      "type": "integer",
+      "table": "media_delete_outbox",
+      "column": "attempts",
+      "notNull": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "media_delete_outbox",
+      "column": "leased_until",
+      "notNull": false
+    },
+    {
+      "type": "text",
+      "table": "media_delete_outbox",
+      "column": "last_error",
+      "notNull": false
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "media_delete_outbox",
+      "column": "queued_at",
+      "notNull": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "media_delete_outbox",
+      "column": "processed_at",
+      "notNull": false
+    },
+    {
+      "type": "text",
+      "table": "memberships",
+      "column": "workspace_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "memberships",
+      "column": "user_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "memberships",
+      "column": "owner_user_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "memberships",
+      "column": "role",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "memberships",
+      "column": "state",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "memberships",
+      "column": "created_by",
+      "notNull": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "memberships",
+      "column": "revoked_at",
+      "notNull": false
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "memberships",
+      "column": "updated_at",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "work_requests",
+      "column": "workspace_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "work_requests",
+      "column": "id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "work_requests",
+      "column": "title",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "work_requests",
+      "column": "kind",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "work_requests",
+      "column": "status",
+      "notNull": true
+    },
+    {
+      "type": "integer",
+      "table": "work_requests",
+      "column": "version",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "work_requests",
+      "column": "reviewed_by",
+      "notNull": false
+    },
+    {
+      "type": "text",
+      "table": "work_requests",
+      "column": "decided_by",
+      "notNull": false
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "work_requests",
+      "column": "updated_at",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "workspaces",
+      "column": "id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "workspaces",
+      "column": "owner_user_id",
+      "notNull": true
+    },
+    {
+      "type": "text",
+      "table": "workspaces",
+      "column": "state",
+      "notNull": true
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "workspaces",
+      "column": "created_at",
+      "notNull": true
+    }
+  ],
+  "observedOn": "2026-10-14",
+  "projectRef": "dbppeymhsemvghbvuvof",
+  "constraints": [
+    {
+      "name": "audit_events_pkey",
+      "table": "audit_events",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "audit_events_workspace_id_fkey",
+      "table": "audit_events",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES growth_starter.workspaces(id)"
+    },
+    {
+      "name": "invitations_email_check",
+      "table": "invitations",
+      "definition": "CHECK (((email = lower(email)) AND (length(email) <= 254)))"
+    },
+    {
+      "name": "invitations_pkey",
+      "table": "invitations",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "invitations_role_check",
+      "table": "invitations",
+      "definition": "CHECK ((role = ANY (ARRAY['agency_admin'::text, 'staff'::text, 'client'::text])))"
+    },
+    {
+      "name": "invitations_secret_digest_check",
+      "table": "invitations",
+      "definition": "CHECK ((secret_digest ~ '^[0-9a-f]{64}$'::text))"
+    },
+    {
+      "name": "invitations_state_check",
+      "table": "invitations",
+      "definition": "CHECK ((state = ANY (ARRAY['pending'::text, 'consumed'::text, 'revoked'::text])))"
+    },
+    {
+      "name": "invitations_workspace_id_fkey",
+      "table": "invitations",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES growth_starter.workspaces(id)"
+    },
+    {
+      "name": "media_consent_state_check",
+      "table": "media",
+      "definition": "CHECK ((consent_state = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'withdrawn'::text])))"
+    },
+    {
+      "name": "media_content_type_check",
+      "table": "media",
+      "definition": "CHECK ((content_type = ANY (ARRAY['image/jpeg'::text, 'image/png'::text, 'image/webp'::text])))"
+    },
+    {
+      "name": "media_id_check",
+      "table": "media",
+      "definition": "CHECK ((id ~ '^[A-Za-z0-9_-]{1,128}$'::text))"
+    },
+    {
+      "name": "media_lifecycle_check",
+      "table": "media",
+      "definition": "CHECK ((lifecycle = ANY (ARRAY['stored'::text, 'delete_pending'::text, 'deleted'::text])))"
+    },
+    {
+      "name": "media_pkey",
+      "table": "media",
+      "definition": "PRIMARY KEY (workspace_id, id)"
+    },
+    {
+      "name": "media_scan_state_check",
+      "table": "media",
+      "definition": "CHECK ((scan_state = ANY (ARRAY['pending'::text, 'clean'::text, 'unsafe'::text])))"
+    },
+    {
+      "name": "media_size_bytes_check",
+      "table": "media",
+      "definition": "CHECK (((size_bytes >= 1) AND (size_bytes <= 3145728)))"
+    },
+    {
+      "name": "media_storage_key_key",
+      "table": "media",
+      "definition": "UNIQUE (storage_key)"
+    },
+    {
+      "name": "media_workspace_id_fkey",
+      "table": "media",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES growth_starter.workspaces(id)"
+    },
+    {
+      "name": "ws_storage_key",
+      "table": "media",
+      "definition": "CHECK ((\"left\"(storage_key, length((('growth-starter/'::text || workspace_id) || '/'::text))) = (('growth-starter/'::text || workspace_id) || '/'::text)))"
+    },
+    {
+      "name": "media_delete_outbox_pkey",
+      "table": "media_delete_outbox",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "media_delete_outbox_state_check",
+      "table": "media_delete_outbox",
+      "definition": "CHECK ((state = ANY (ARRAY['pending'::text, 'processing'::text, 'done'::text])))"
+    },
+    {
+      "name": "media_delete_outbox_workspace_id_media_id_fkey",
+      "table": "media_delete_outbox",
+      "definition": "FOREIGN KEY (workspace_id, media_id) REFERENCES growth_starter.media(workspace_id, id)"
+    },
+    {
+      "name": "media_delete_outbox_workspace_id_media_id_key",
+      "table": "media_delete_outbox",
+      "definition": "UNIQUE (workspace_id, media_id)"
+    },
+    {
+      "name": "distinct_owner_member",
+      "table": "memberships",
+      "definition": "CHECK ((user_id <> owner_user_id))"
+    },
+    {
+      "name": "memberships_pkey",
+      "table": "memberships",
+      "definition": "PRIMARY KEY (workspace_id, user_id)"
+    },
+    {
+      "name": "memberships_role_check",
+      "table": "memberships",
+      "definition": "CHECK ((role = ANY (ARRAY['agency_admin'::text, 'staff'::text, 'client'::text])))"
+    },
+    {
+      "name": "memberships_state_check",
+      "table": "memberships",
+      "definition": "CHECK ((state = ANY (ARRAY['active'::text, 'revoked'::text])))"
+    },
+    {
+      "name": "memberships_user_id_check",
+      "table": "memberships",
+      "definition": "CHECK ((user_id ~ '^[A-Za-z0-9_-]{8,128}$'::text))"
+    },
+    {
+      "name": "memberships_workspace_id_fkey",
+      "table": "memberships",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES growth_starter.workspaces(id)"
+    },
+    {
+      "name": "work_requests_id_check",
+      "table": "work_requests",
+      "definition": "CHECK ((id ~ '^[A-Za-z0-9_-]{1,128}$'::text))"
+    },
+    {
+      "name": "work_requests_kind_check",
+      "table": "work_requests",
+      "definition": "CHECK ((kind = ANY (ARRAY['Website update'::text, 'Social content'::text, 'Local SEO'::text, 'Other'::text])))"
+    },
+    {
+      "name": "work_requests_pkey",
+      "table": "work_requests",
+      "definition": "PRIMARY KEY (workspace_id, id)"
+    },
+    {
+      "name": "work_requests_status_check",
+      "table": "work_requests",
+      "definition": "CHECK ((status = ANY (ARRAY['Requested'::text, 'In progress'::text, 'Awaiting approval'::text, 'Approved'::text, 'Changes requested'::text, 'Completed'::text])))"
+    },
+    {
+      "name": "work_requests_title_check",
+      "table": "work_requests",
+      "definition": "CHECK (((length(title) >= 1) AND (length(title) <= 100)))"
+    },
+    {
+      "name": "work_requests_version_check",
+      "table": "work_requests",
+      "definition": "CHECK ((version >= 0))"
+    },
+    {
+      "name": "work_requests_workspace_id_fkey",
+      "table": "work_requests",
+      "definition": "FOREIGN KEY (workspace_id) REFERENCES growth_starter.workspaces(id)"
+    },
+    {
+      "name": "owner_workspace_id",
+      "table": "workspaces",
+      "definition": "CHECK ((id = ('ws_'::text || owner_user_id)))"
+    },
+    {
+      "name": "workspaces_id_check",
+      "table": "workspaces",
+      "definition": "CHECK ((id ~ '^ws_[A-Za-z0-9_-]{8,128}$'::text))"
+    },
+    {
+      "name": "workspaces_owner_user_id_check",
+      "table": "workspaces",
+      "definition": "CHECK ((owner_user_id ~ '^[A-Za-z0-9_-]{8,128}$'::text))"
+    },
+    {
+      "name": "workspaces_pkey",
+      "table": "workspaces",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "workspaces_state_check",
+      "table": "workspaces",
+      "definition": "CHECK ((state = ANY (ARRAY['active'::text, 'suspended'::text])))"
+    }
+  ],
+  "metadataOnly": true,
+  "legacySetRole": true,
+  "privateSchemaPresent": false
+}

@@ -1,0 +1,30 @@
+import type {SeoReport} from './seo-growth.mjs';
+import type {SearchAnalysis} from './seo-search-data.mjs';
+export type PremiumPage={id:string;topicCluster:string;service:string;location:string;primaryKeyword:string;supportingKeywords:string[];
+ targetPage:string;pageStatus:string;priority:string;objective:string;searchIntent:string[];
+ titleDraft:string;metaDescriptionDraft:string;headings:string[];
+ contentSections:Array<{heading:string;draft:string;requiresConfirmation:string[]}>;
+ detailChecklist:string[];internalLinkSuggestions:Array<{url:string;rationale:string}>;
+ technicalFindings:Array<{code:string;reason:string}>;
+ searchDemandStatus:string;reviewStatus:string;publicationEnabled:false;
+ sourceEvidence:{keyword:{source:string};page:null|{source:string};searchObservations:Array<{query:string;clicks:number;impressions:number;period:string[];property:string;source:string}>}
+};
+export type PremiumPlan={
+ version:'growth-starter.premium-content-plan.v1';workspaceId:string;
+ business:{name:string;country:string;city:string;industry:string;website:string;ownershipStatus:string};
+ generatedFrom:{seoReportVersion:string;searchEvidenceStatus:string;sourceMode:string};
+ seo:{pages:PremiumPage[];cannibalisationWarnings:string[];technicalPriorities:Array<{code:string;finding:string;url:string}>;keywordMetricsStatus:string};
+ geo:{pages:Array<{url:string;mode:string;checks:Array<{id:string;observation:string;recommendation:string}>;observedSignals:number;totalChecks:number;readinessScore:null;caveat:string}>;
+ providerObservation:{status:string;citations:null;referrals:null;AIOverviews:null};providerContract:{version:string;enabled:false}};
+ aeo:{answers:Array<{id:string;question:string;directAnswerDraft:string;followUpTopics:string[];targetPage:string;
+ factChecksRequired:string[];evidence:{source:string};status:string;references:string[];
+ patientSpecificAdvice:false;guaranteedAIVisibility:false}>};
+ sco:{reviewChecklist:string[]};
+ local:{googleBusinessProfile:string;profileClaimsVerified:false;priorities:string[]};
+ social:{proposals:Array<{id:string;channelIdeas:string[];concept:string;angle:string;suggestedHook:string;callToAction:string;status:string;publishEnabled:false}>};
+ tasks:Array<{id:string;url:string;priority:string;action:string;why:string;status:string}>;
+ externalActions:{crawl:false;persist:false;edit:false;approve:false;publish:false};limitations:string[];
+};
+export function buildPremiumContentStrategy(input:{seoReport:SeoReport;searchAnalysis?:SearchAnalysis|null}):PremiumPlan;
+export function exportPremiumStrategyCsv(result:PremiumPlan):string;
+export function requestPremiumPublication():never;

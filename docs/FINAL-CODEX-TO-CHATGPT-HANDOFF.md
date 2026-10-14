@@ -13,6 +13,19 @@ Updated October 14, 2026, Asia/Karachi. Source engineering delivery; no hosted a
 
 The final verification record is appended after the implementation push. A documentation commit cannot embed its own hash; the collected delivery evidence and PR carry that exact final identity. Do not treat a hand-entered readiness boolean as acceptance.
 
+### Verified implementation record
+
+Implementation commit: `097abccf70319bbe7af073427faace94ba22aa40`. All four exact-SHA **push** workflows completed successfully, with job logs inspected:
+
+| Workflow | Verified result | CI evidence |
+|---|---|---|
+| Core safety | 238 tests, 238 pass, zero failures | [run 38608608272](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38608608272) |
+| Disposable PostgreSQL 17 | 70 tests, 70 pass, zero failures | [run 38608608278](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38608608278) |
+| UI/SEO | Both typechecks/private build; 12 existing + six integrated Chromium tests; 39 overlapping SEO tests; zero failures | [run 38608608277](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38608608277) |
+| Supply chain/container | Root/staging audits zero findings; 16 overlapping staging tests; container built and unapproved startup refused | [run 38608608321](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38608608321) |
+
+The browser dependency audit also returned zero vulnerabilities. These counts overlap; do not sum subset suites as unique tests. `artifacts/final-implementation-verification.json` preserves the fetched release snapshot bound to this implementation. Subsequent documentation/evidence commits must also pass all four exact-head workflows; regenerate the delivery JSON from the final clean pushed HEAD before accepting it. Source readiness does not establish hosted provider or production acceptance.
+
 ## Application and security architecture
 
 `private.html` / `src/private-main.ts` builds `PrivateWorkspaceApp` separately from the existing AppDeploy demo. Vite's private build has no platform SDK dependency. The browser uses only same-origin HTTPS cookie requests through `src/private-workspace-client.mjs`; it never receives provider bearer/refresh tokens, PKCE verifiers, grants or database credentials.

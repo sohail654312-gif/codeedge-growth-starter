@@ -15,19 +15,34 @@ const BAD='Supabase PKCE exchange denied.';
 const OUTAGE='Supabase Auth service unavailable.';
 function bad(){throw Error(BAD);}
 function outage(){throw Error(OUTAGE);}
-function jsonResponse(response){
+async function jsonResponse(response,timeoutMs){
  if(!response || !Number.isInteger(response.status)||
     typeof response.text!=='function')outage();
  if(response.status===400||response.status===401||response.status===403)bad();
  if(response.status!==200)outage();
- return response.text().then(raw=>{
-  if(typeof raw!=='string'||raw.length>32768)outage();
+ let timer,reader;
+ try{
+  const read=async()=>{
+   if(response.body?.getReader){
+    reader=response.body.getReader();let bytes=0;const chunks=[];
+    for(;;){const part=await reader.read();if(part.done)break;
+     if(!(part.value instanceof Uint8Array))outage();
+     bytes+=part.value.byteLength;if(bytes>32768)outage();chunks.push(Buffer.from(part.value));}
+    return Buffer.concat(chunks).toString('utf8');
+   }
+   return response.text(); // bounded timeout also covers synthetic/test adapters.
+  };
+  const raw=await Promise.race([read(),new Promise((_,reject)=>{
+   timer=setTimeout(()=>reject(Error(OUTAGE)),timeoutMs);
+  })]);
+  if(typeof raw!=='string'||Buffer.byteLength(raw,'utf8')>32768)outage();
   try{
    const value=JSON.parse(raw);
    if(!value||typeof value!=='object'||Array.isArray(value))bad();
    return value;
   }catch(e){if(e?.message===BAD)throw e;outage();}
- });
+ }catch(e){if(e?.message===BAD)throw e;outage();}
+ finally{clearTimeout(timer);if(reader){void reader.cancel().catch(()=>{});}}
 }
 function trustedOrigins(projectUrl,callbackUrl){
  try{
@@ -75,7 +90,9 @@ export function createSupabasePkceHttpAdapter({
      code_challenge_method:'s256'})
    });
    // Provider errors are not an account-existence oracle for the browser.
-   await jsonResponse(response);
+   // Expected account/provider denial must not disclose account existence.
+   if([400,403,404,422].includes(response?.status))return Object.freeze({requested:true});
+   await jsonResponse(response,timeoutMs);
    return Object.freeze({requested:true});
   },
   async exchangeAuthCode({code,codeVerifier,redirectTo:requestedRedirect}={}){
@@ -88,7 +105,7 @@ export function createSupabasePkceHttpAdapter({
     headers:{apikey,'content-type':'application/json','accept':'application/json'},
     body
    });
-   const data=await jsonResponse(response);
+   const data=await jsonResponse(response,timeoutMs);
    if(data.token_type!=='bearer'||!Number.isFinite(data.expires_in)||
       data.expires_in<=0||data.expires_in>3600)bad();
    // Never return refresh_token, provider_token or other high-value fields.
@@ -100,7 +117,7 @@ export function createSupabasePkceHttpAdapter({
     method:'GET',headers:{apikey,authorization:'Bearer '+jwt,
       accept:'application/json'}
    });
-   const data=await jsonResponse(response);
+   const data=await jsonResponse(response,timeoutMs);
    if(typeof data.id!=='string'||!data.id||
       typeof data.email!=='string'||!data.email||
       !data.email_confirmed_at||data.is_anonymous===true||

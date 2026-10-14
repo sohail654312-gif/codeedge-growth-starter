@@ -24,8 +24,18 @@ SELECT jsonb_build_object(
  'policies',(SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p."table",p.name),'[]'::jsonb) FROM pol p),
  'legacyFunctions',(SELECT COALESCE(jsonb_agg(to_jsonb(f) ORDER BY f.name),'[]'::jsonb) FROM fn f),
  'authenticatedSchemaUsage',has_schema_privilege('authenticated','growth_starter','USAGE'),
+ 'anonSchemaUsage',has_schema_privilege('anon','growth_starter','USAGE'),
+ 'serviceRoleSchemaUsage',has_schema_privilege('service_role','growth_starter','USAGE'),
  'authenticatedColumnSelectCount',(SELECT count(*)::int FROM information_schema.column_privileges
   WHERE table_schema='growth_starter' AND grantee='authenticated' AND privilege_type='SELECT'),
+ 'anonColumnSelectCount',(SELECT count(*)::int FROM information_schema.column_privileges
+  WHERE table_schema='growth_starter' AND grantee='anon' AND privilege_type='SELECT'),
+ 'serviceRoleColumnSelectCount',(SELECT count(*)::int FROM information_schema.column_privileges
+  WHERE table_schema='growth_starter' AND grantee='service_role' AND privilege_type='SELECT'),
+ 'publicExecuteFunctionCount',(SELECT count(*)::int FROM pg_proc p
+  JOIN pg_namespace n ON n.oid=p.pronamespace
+  CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a
+  WHERE n.nspname='growth_starter' AND a.grantee=0 AND a.privilege_type='EXECUTE'),
  'runtimeCanSetLegacyReader',pg_has_role('growth_starter_runtime','growth_starter_reader','SET'),
  'privateSchemaPresent',to_regnamespace('growth_starter_private') IS NOT NULL,
  'dashboardExposureVerified',false,

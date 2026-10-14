@@ -25,3 +25,9 @@ test('schema, calendar and duplicate tabs clearly retain offline evidence and pa
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
  }
 });
+test('starting revision comparison bounds the rendered DOM for the same 1000 loaded requests',async({page},testInfo)=>{
+ await page.goto('/?baseline=1');await expect(page.locator('.work-item')).toHaveCount(1000);
+ const before=await page.locator('.work-panel *').count();
+ await page.goto('/');await expect(page.locator('.work-item')).toHaveCount(8);const after=await page.locator('.work-panel *').count();
+ expect(after).toBeLessThan(before);console.log('PHASE315O_UI_DOM '+JSON.stringify({project:testInfo.project.name,loadedRequests:1000,beforeCards:1000,afterCards:8,beforeElements:before,afterElements:after}));
+});

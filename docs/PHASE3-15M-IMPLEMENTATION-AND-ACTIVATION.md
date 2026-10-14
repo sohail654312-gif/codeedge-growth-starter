@@ -53,6 +53,11 @@ The installed Data API and selected GraphQL schema are configuration evidence,
 not signed-user REST/GraphQL negative acceptance. The private schema must remain
 unchecked after creation. Do not disable unrelated public or GraphQL schemas.
 
+Auth URL Configuration readback: Site URL is `http://localhost:3000` and there
+are **no redirect URLs**. No URL was changed. The future exact approved HTTPS
+callback and its state-query matching rule must be added before real PKCE can
+complete; no existing hostname is assumed or invented.
+
 No growth-named active database connection was observed. That does not prove all
 external dependency consumers are absent; dependency review remains an operator
 gate. Exact current grants and function definitions were inspected without
@@ -81,7 +86,10 @@ A suitable free provider must support Node 22 or this container, verified HTTPS
 ingress, protected secret files, approved PostgreSQL connectivity and sufficient
 free-plan connection/runtime limits. This is a portable package, not a claim that
 any provider has been selected, purchased or accepted. Record the exact resolved
-Node base-image digest and provider limits before activation. No local Docker is
+Node base-image digest and provider limits before activation. The current image
+is pinned to the CI-resolved Node 22 Alpine manifest digest
+`sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402`.
+No local Docker is
 installed or run; container build/refusal checks use the existing GitHub runner.
 
 Runtime variables (values entered only through the approved secret channel):

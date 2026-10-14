@@ -65,10 +65,10 @@ export function createDisposableHttpsCookieGateway({
 // Transport shared with the real restricted SQL adapter. Legacy hosted
 // factories stay disabled; this function does not create a listener.
 export function createPrivateHttpsCookieHandler({bridge,authority,appOrigin,csrfSigningKey,
- emailLogin=false}={}){
+ emailLogin=false,secureIngress=req=>req.socket?.encrypted===true}={}){
  if(!bridge||typeof bridge.begin!=='function'||typeof bridge.completeAndIssue!=='function'||
     !authority||typeof authority.withAuthorizedRead!=='function'||typeof authority.revoke!=='function'||
-    !Buffer.isBuffer(csrfSigningKey)||csrfSigningKey.length<32)blocked();
+    !Buffer.isBuffer(csrfSigningKey)||csrfSigningKey.length<32||typeof secureIngress!=='function')blocked();
  let origin,host;
  try{
   const u=new URL(appOrigin);
@@ -77,8 +77,9 @@ export function createPrivateHttpsCookieHandler({bridge,authority,appOrigin,csrf
   origin=u.origin;host=u.host;
  }catch{blocked();}
  const handler=async(req,res)=>{
-  // Direct TLS required; reverse-proxy X-Forwarded-Proto is NOT trusted.
-  if(req.socket?.encrypted!==true||req.headers.host!==host)
+  // Default is direct TLS. A production proxy adapter must authenticate the
+  // actual socket peer; forwarded headers alone are never sufficient.
+  if(secureIngress(req)!==true||req.headers.host!==host)
    return response(res,421,{error:'HTTPS origin required.'});
   if(typeof req.url!=='string'||req.url.length>1800)return response(res,400);
   let url,jar;

@@ -129,12 +129,29 @@ test('Phase 3.15M exact restricted issuer, PKCE adapter, tenant denial, races an
   const logout=runtime.authority.revoke({token:a}).then(r=>{logoutFinished=true;return r;});
   await pause(125);assert.equal(logoutFinished,false);await hold.query('COMMIT');hold.release();
   assert.deepEqual(await logout,{revoked:true});await assert.rejects(read(a,WA),/denied/);
-  await admin.query("UPDATE growth_starter.workspaces SET state='suspended' WHERE id=$1",[WB]);
+  await admin.query('UPDATE growth_starter_private.codeedge_sessions SET expires_at=now()-interval \'1 second\' WHERE id=$1',[b.split('.')[1]]);
+  await assert.rejects(read(b,WB),/denied/);
+  await admin.query('UPDATE growth_starter_private.codeedge_sessions SET expires_at=now()+interval \'15 minutes\' WHERE id=$1',[b.split('.')[1]]);
+  const workspaceReader=await gateway.connect();
+  await workspaceReader.query('BEGIN');
+  await workspaceReader.query('SELECT * FROM growth_starter_private.read_requests($1,$2,20)',[b,WB]);
+  let suspensionFinished=false;
+  const suspend=admin.query("UPDATE growth_starter.workspaces SET state='suspended' WHERE id=$1",[WB])
+   .then(()=>{suspensionFinished=true;});
+  await pause(125);assert.equal(suspensionFinished,false);
+  await workspaceReader.query('COMMIT');workspaceReader.release();await suspend;
   await assert.rejects(read(b,WB),/denied/);
   // A consumed grant that already issued cannot mint another session.
   const f=(await admin.query('SELECT one_time_grant_id,email_sha256 FROM growth_starter_private.fresh_login_flows LIMIT 1')).rows[0];
   await assert.rejects(issuer.query('SELECT growth_starter_private.issue_session($1,$2,$3,$4,$5,$6,$7)',
    [f.one_time_grant_id,f.email_sha256,A,randomUUID(),randomUUID(),'0'.repeat(64),new Date(Date.now()+900000)]),e=>e.code==='28000');
+  const h='1'.repeat(64),bindingHash='2'.repeat(64),verifier=randomBytes(32).toString('base64url'),grant=randomBytes(32).toString('base64url');
+  await issuer.query('SELECT growth_starter_private.begin_login($1,$2,$3,$4,$5)',[h,bindingHash,verifier,grant,'3'.repeat(64)]);
+  await issuer.query('SELECT * FROM growth_starter_private.consume_login($1,$2)',[h,bindingHash]);
+  await assert.rejects(issuer.query('SELECT growth_starter_private.issue_session($1,$2,$3,$4,$5,$6,$7)',
+   [grant,'3'.repeat(64),A,randomUUID(),a.split('.')[1],'4'.repeat(64),new Date(Date.now()+900000)]),e=>e.code==='23505');
+  assert.equal((await admin.query('SELECT issued_at FROM growth_starter_private.fresh_login_flows WHERE one_time_grant_id=$1',[grant])).rows[0].issued_at,null,
+   'Failed session INSERT must roll back grant consumption');
   // Explicit lockdown denies existing pooled connections too, without
   // deleting sessions or re-enabling any legacy access path.
   await admin.query(readFileSync('db/drafts/phase315m_lockdown_REVIEW_ONLY.sql','utf8'));

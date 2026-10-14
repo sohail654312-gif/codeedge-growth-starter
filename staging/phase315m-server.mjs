@@ -2,11 +2,12 @@
  * Requires approved real exact-session authority injection; CLI deliberately
  * refuses to invent a provider authority or weaken the revocation contract.
  */
-import {createServer} from 'node:https';
+import {createServer as createHttpsServer} from 'node:https';
+import {createServer as createHttpServer} from 'node:http';
 import {readFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import {Pool} from 'pg';
-import {readPhase315mConfig} from './phase315m-config.mjs';
+import {readPhase315mConfig,createPhase315mIngress} from './phase315m-config.mjs';
 import {createSupabasePkceHttpAdapter} from '../backend/phase315g-supabase-pkce-adapter.mjs';
 import {createPhase315mPrivateRuntime} from '../backend/phase315m-private-runtime.mjs';
 export async function startPhase315mStaging({env=process.env,evidence,checkProviderSession,
@@ -24,17 +25,23 @@ export async function startPhase315mStaging({env=process.env,evidence,checkProvi
    callbackUrl:config.appOrigin+'/auth/callback',publishableKey:config.publishableKey,fetchImpl});
   const runtime=await createPhase315mPrivateRuntime({issuerPool,gatewayPool,provider,
    projectUrl:config.projectUrl,appOrigin:config.appOrigin,
-   csrfSigningKey:readFileSync(config.csrfKeyPath),checkProviderSession});
-  server=createServer({cert:readFileSync(config.certPath),key:readFileSync(config.keyPath),
-   minVersion:'TLSv1.2'},(req,res)=>{
-    // Direct TLS: forwarded headers cannot manufacture a secure request.
+   csrfSigningKey:readFileSync(config.csrfKeyPath),checkProviderSession,secureIngress:createPhase315mIngress(config)});
+  const handle=(req,res)=>{
+    // Public liveness does not validate authentication or expose tenant data.
+    if(req.method==='GET'&&req.url==='/health'){
+     res.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});
+     return res.end('{"status":"listening","hostedAcceptance":"pending"}');
+    }
     runtime.handler(req,res).catch(()=>{
      if(!res.headersSent){res.writeHead(503,{'cache-control':'no-store'});res.end();}
      else res.destroy();
     });
-   });
+   };
+  server=config.ingressMode==='direct_tls'?
+   createHttpsServer({cert:readFileSync(config.certPath),key:readFileSync(config.keyPath),minVersion:'TLSv1.2'},handle):
+   createHttpServer(handle);
   server.headersTimeout=5000;server.requestTimeout=10000;server.maxHeadersCount=40;
-  await new Promise((ok,no)=>{server.once('error',no);server.listen(config.port,'127.0.0.1',ok);});
+  await new Promise((ok,no)=>{server.once('error',no);server.listen(config.port,config.bindHost,ok);});
   return {server,close:async()=>{
    await new Promise(ok=>server.close(ok));await Promise.all([issuerPool.end(),gatewayPool.end()]);
   }};

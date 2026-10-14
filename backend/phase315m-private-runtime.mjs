@@ -64,7 +64,7 @@ function sessionHash(id,secret){
  .update(id).update('\0').update(secret).digest('hex');
 }
 export async function createPhase315mPrivateRuntime({issuerPool,gatewayPool,provider,
- projectUrl,appOrigin,csrfSigningKey,checkProviderSession,now=()=>Date.now()}={}){
+ projectUrl,appOrigin,csrfSigningKey,checkProviderSession,secureIngress,now=()=>Date.now()}={}){
  if(!issuerPool||!gatewayPool||issuerPool===gatewayPool||
  ![issuerPool,gatewayPool].every(p=>typeof p.connect==='function'&&typeof p.query==='function')||
  !provider||!['sendLoginEmail','exchangeAuthCode','verifyUser'].every(k=>typeof provider[k]==='function')||
@@ -143,6 +143,6 @@ export async function createPhase315mPrivateRuntime({issuerPool,gatewayPool,prov
    });
   }
  });
- const {handler}=createPrivateHttpsCookieHandler({bridge,authority,appOrigin,csrfSigningKey,emailLogin:true});
+ const {handler}=createPrivateHttpsCookieHandler({bridge,authority,appOrigin,csrfSigningKey,emailLogin:true,secureIngress});
  return Object.freeze({bridge,authority,handler,status:'restricted_source_runtime_hosted_acceptance_pending'});
 }

@@ -1,3 +1,4 @@
+import {isIP} from 'node:net';
 // Staging-only source configuration. Missing approvals never become defaults.
 export function readPhase315mConfig(env,evidence){
  const fail=()=>{throw Error('Phase 3.15M approved staging prerequisites unavailable.');};
@@ -21,15 +22,35 @@ export function readPhase315mConfig(env,evidence){
    (u.port&&u.port!=='5432'))fail(); // session-mode only; no transaction pooler.
   databaseUrls[name.toLowerCase()]=u.href;
  }
+ const ingressMode=env.GS315M_INGRESS_MODE||'direct_tls';
+ if(!['direct_tls','managed_https'].includes(ingressMode))fail();
+ let trustedProxyAddresses=[];
+ if(ingressMode==='managed_https'){
+  trustedProxyAddresses=(env.GS315M_TRUSTED_PROXY_ADDRESSES||'').split(',').map(x=>x.trim());
+  if(evidence.ingressMode!=='managed_https'||evidence.proxyReplacesForwardedHeaders!==true||
+   evidence.privateIngressOnly!==true||trustedProxyAddresses.length>16||
+   !trustedProxyAddresses.every(x=>isIP(x)))fail();
+ }
  if(!/^sb_publishable_[A-Za-z0-9_-]{16,}$/.test(env.GS315M_PUBLISHABLE_KEY||'')||
  !env.GS315M_DATABASE_CA_PEM?.includes('-----BEGIN CERTIFICATE-----')||
  !env.GS315M_DATABASE_CA_PEM?.includes('-----END CERTIFICATE-----')||
- typeof env.GS315M_TLS_CERT_PATH!=='string'||!env.GS315M_TLS_CERT_PATH||
- typeof env.GS315M_TLS_KEY_PATH!=='string'||!env.GS315M_TLS_KEY_PATH||
+ (ingressMode==='direct_tls'&&(!env.GS315M_TLS_CERT_PATH||!env.GS315M_TLS_KEY_PATH))||
  typeof env.GS315M_CSRF_KEY_PATH!=='string'||!env.GS315M_CSRF_KEY_PATH)fail();
- const port=Number(env.GS315M_PORT||8443);if(!Number.isInteger(port)||port<1||port>65535)fail();
+ const port=Number(env.GS315M_PORT||env.PORT||(ingressMode==='direct_tls'?8443:8787));
+ if(!Number.isInteger(port)||port<1||port>65535)fail();
  return Object.freeze({appOrigin:app.origin,projectUrl:'https://dbppeymhsemvghbvuvof.supabase.co/',
   databaseUrls,caPem:env.GS315M_DATABASE_CA_PEM,publishableKey:env.GS315M_PUBLISHABLE_KEY,
   certPath:env.GS315M_TLS_CERT_PATH,keyPath:env.GS315M_TLS_KEY_PATH,
-  csrfKeyPath:env.GS315M_CSRF_KEY_PATH,port,commitSha:env.GS315M_COMMIT_SHA});
+  csrfKeyPath:env.GS315M_CSRF_KEY_PATH,port,commitSha:env.GS315M_COMMIT_SHA,ingressMode,
+  trustedProxyAddresses,bindHost:ingressMode==='direct_tls'?'127.0.0.1':'0.0.0.0'});
+}
+export function createPhase315mIngress(config){
+ if(config.ingressMode==='direct_tls')return req=>req.socket?.encrypted===true;
+ const allowed=new Set(config.trustedProxyAddresses);
+ const host=new URL(config.appOrigin).host;
+ return req=>{
+  const address=req.socket?.remoteAddress?.replace(/^::ffff:/,'');
+  return allowed.has(address)&&req.headers['x-forwarded-proto']==='https'&&
+   (req.headers['x-forwarded-host']===undefined||req.headers['x-forwarded-host']===host);
+ };
 }

@@ -5,7 +5,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {createPrivateHttpsCookieHandler} from '../backend/phase315e-https-cookies.mjs';
 import {validateFreshProviderIdentity} from '../backend/phase315d-fresh-login.mjs';
 import {createSupabasePkceHttpAdapter} from '../backend/phase315g-supabase-pkce-adapter.mjs';
-import {readPhase315mConfig} from '../staging/phase315m-config.mjs';
+import {readPhase315mConfig,createPhase315mIngress} from '../staging/phase315m-config.mjs';
 const APP='https://clinic.example.invalid',PROJECT='https://fictional-proj.supabase.co';
 const opaque=()=>randomBytes(32).toString('base64url');
 async function request(handler,path,{method='GET',headers={},body='',tls=true}={}){
@@ -80,4 +80,15 @@ test('staging configuration cannot infer owner/reviewer approval or accept broad
  for(const change of [{exactProviderRevocationAccepted:false},{privateSchemaExcluded:false},{commitSha:'b'.repeat(40)}])
   assert.throws(()=>readPhase315mConfig(env,{...evidence,...change}),/unavailable/);
  assert.throws(()=>readPhase315mConfig({...env,GS315M_GATEWAY_DATABASE_URL:env.GS315M_GATEWAY_DATABASE_URL.replace('gs315k_gateway','postgres')},evidence),/unavailable/);
+ const managedEnv={...env,GS315M_INGRESS_MODE:'managed_https',GS315M_TRUSTED_PROXY_ADDRESSES:'10.0.0.2',PORT:'8787'};
+ assert.throws(()=>readPhase315mConfig(managedEnv,evidence),/unavailable/);
+ const config=readPhase315mConfig(managedEnv,{...evidence,ingressMode:'managed_https',
+  proxyReplacesForwardedHeaders:true,privateIngressOnly:true});
+ assert.equal(config.bindHost,'0.0.0.0');assert.equal(config.port,8787);
+ const secure=createPhase315mIngress(config);
+ const proxyReq={socket:{remoteAddress:'::ffff:10.0.0.2'},headers:{'x-forwarded-proto':'https'}};
+ assert.equal(secure(proxyReq),true);
+ assert.equal(secure({...proxyReq,socket:{remoteAddress:'203.0.113.1'}}),false);
+ assert.equal(secure({...proxyReq,headers:{'x-forwarded-proto':'http'}}),false);
+ assert.equal(secure({...proxyReq,headers:{...proxyReq.headers,'x-forwarded-host':'attacker.invalid'}}),false);
 });

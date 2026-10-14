@@ -27,8 +27,20 @@ jobs:
           node --check staging/config.mjs
           node --check staging/phase315m-config.mjs
           node --check staging/phase315m-server.mjs
+          node --check staging/phase315m-bootstrap.mjs
           node --check backend/phase315m-private-runtime.mjs
           node --check staging/hosted-acceptance.mjs
           node --check backend/supabase-staging-identity.mjs
           node --check backend/staging-supabase-gateway.mjs
           node --test tests/staging-config.test.mjs tests/supabase-staging-identity.test.mjs tests/hosted-acceptance.test.mjs
+      - name: Build isolated portable gateway package without credentials
+        run: docker build -f staging/Dockerfile.phase315m -t growth-starter-private-review .
+      - name: Verify package refuses unapproved startup
+        shell: bash
+        run: |
+          set +e
+          docker run --rm growth-starter-private-review > startup.log 2>&1
+          result=$?
+          set -e
+          test "$result" -eq 1
+          grep -F 'Private staging startup blocked: approved prerequisites unavailable.' startup.log

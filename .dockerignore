@@ -1,0 +1,10 @@
+.git
+**/node_modules
+.env
+.env.*
+**/*.key
+**/*.pem
+**/*.log
+work
+outputs
+test-results

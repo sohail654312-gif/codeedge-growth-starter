@@ -50,7 +50,7 @@ test('post-replacement cutover revokes every old lane; SAVEPOINT restores origin
    "$$ SELECT NULLIF(current_setting('request.jwt.claim.sub',true),'')::uuid $$");
   // The production session-probe references managed auth tables. Fixture
   // installs a harmless replacement of the same signature to test ACLs.
-  await c.query("CREATE OR REPLACE FUNCTION growth_starter.staging_session_active(text,text,text) "+
+  await c.query("CREATE OR REPLACE FUNCTION growth_starter.staging_session_active(p_user text,p_session text,p_email text) "+
    "RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS $$ SELECT false $$");
   await c.query('REVOKE ALL ON FUNCTION growth_starter.staging_session_active(text,text,text) FROM PUBLIC');
   await c.query('GRANT EXECUTE ON FUNCTION growth_starter.staging_session_active(text,text,text) TO growth_starter_reader');

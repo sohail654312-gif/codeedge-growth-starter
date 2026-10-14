@@ -1,0 +1,21 @@
+name: Independent Supabase Edge feasibility review
+on:
+  push:
+    branches: [engineering/chatgpt-edge-feasibility-20261014]
+permissions:
+  contents: read
+jobs:
+  edge-source-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify review-only static audit and documented blockers
+        run: |
+          node --check tests/chatgpt-supabase-edge-feasibility.test.mjs
+          node --test tests/chatgpt-supabase-edge-feasibility.test.mjs
+      - name: Verify full existing source regressions
+        run: node --test tests/*.test.mjs backend/pg-session-authority.test.mjs

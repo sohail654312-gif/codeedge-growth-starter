@@ -60,6 +60,15 @@ export function createDisposableHttpsCookieGateway({
     !authority||typeof authority.issue!=='function'||
     typeof authority.withAuthorizedRead!=='function'||typeof authority.revoke!=='function'||
     !Buffer.isBuffer(csrfSigningKey)||csrfSigningKey.length<32)blocked();
+ return createPrivateHttpsCookieHandler({bridge,authority,appOrigin,csrfSigningKey});
+}
+// Transport shared with the real restricted SQL adapter. Legacy hosted
+// factories stay disabled; this function does not create a listener.
+export function createPrivateHttpsCookieHandler({bridge,authority,appOrigin,csrfSigningKey,
+ emailLogin=false}={}){
+ if(!bridge||typeof bridge.begin!=='function'||typeof bridge.completeAndIssue!=='function'||
+    !authority||typeof authority.withAuthorizedRead!=='function'||typeof authority.revoke!=='function'||
+    !Buffer.isBuffer(csrfSigningKey)||csrfSigningKey.length<32)blocked();
  let origin,host;
  try{
   const u=new URL(appOrigin);
@@ -86,6 +95,11 @@ export function createDisposableHttpsCookieGateway({
   if(pathname==='/auth/start'&&req.method==='GET'){
    if(url.search||!sameSite)return response(res,403);
    if(jar.has(SESSION))return response(res,409,{error:'Sign out before changing accounts.'});
+   if(emailLogin){
+    const nonce=(await import('node:crypto')).randomBytes(32).toString('base64url');
+    const csrf=csrfFor(csrfSigningKey,nonce);
+    return response(res,200,{csrfToken:csrf},{setCookies:[cookie(FLOW,nonce,{ttl:300})]});
+   }
    try{
     const flow=await bridge.begin();
     if(!OPAQUE.test(flow.state)||!OPAQUE.test(flow.browserBinding)||
@@ -96,6 +110,30 @@ export function createDisposableHttpsCookieGateway({
      redirectTo:flow.redirectTo},{
       setCookies:[cookie(FLOW,flow.browserBinding,{ttl:300})]});
    }catch{return response(res,503,{error:'Login unavailable.'});}
+  }
+  if(emailLogin&&pathname==='/auth/start'&&req.method==='POST'){
+   const nonce=jar.get(FLOW);
+   if(url.search||req.headers.origin!==origin||!sameSite||jar.has(SESSION)||
+      !OPAQUE.test(nonce||'')||!equal(req.headers['x-csrf-token'],csrfFor(csrfSigningKey,nonce)))
+     return response(res,403);
+   if(req.headers['content-type']!=='application/json'||req.headers['transfer-encoding']!==undefined||
+      !/^[1-9][0-9]{0,3}$/.test(req.headers['content-length']||'')||
+      Number(req.headers['content-length'])>1024)return response(res,400);
+   let body;
+   try{
+    let raw='';req.setTimeout?.(4000,()=>req.destroy());
+    for await(const chunk of req){raw+=chunk.toString('utf8');if(Buffer.byteLength(raw)>1024)throw Error();}
+    body=JSON.parse(raw);
+    if(!body||Array.isArray(body)||Object.keys(body).length!==1||
+       typeof body.email!=='string'||body.email.length>254||
+       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email))throw Error();
+   }catch{return response(res,400);}
+   try{
+    const flow=await bridge.begin({email:body.email});
+    if(!OPAQUE.test(flow.browserBinding||''))throw Error();
+    return response(res,202,{message:'If eligible, check your email to continue.'},
+     {setCookies:[cookie(FLOW,flow.browserBinding,{ttl:300})]});
+   }catch{return response(res,503,{error:'Login unavailable. Retry later.'});}
   }
   if(pathname==='/auth/callback'&&req.method==='GET'){
    const bad=()=>response(res,303,null,{

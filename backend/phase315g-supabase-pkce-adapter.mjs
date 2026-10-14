@@ -63,6 +63,21 @@ export function createSupabasePkceHttpAdapter({
  }
  return Object.freeze({
   status:'provider_http_adapter_unwired_to_hosted_entrypoints',
+  async sendLoginEmail({email,codeChallenge,state}={}){
+   if(typeof email!=='string'||email.length>254||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||
+      !/^[A-Za-z0-9_-]{43}$/.test(codeChallenge||'')||
+      !/^[A-Za-z0-9_-]{43}$/.test(state||''))bad();
+   const callback=new URL(redirectTo);callback.searchParams.set('state',state);
+   const response=await request(provider+'/auth/v1/otp?redirect_to='+encodeURIComponent(callback.href),{
+    method:'POST',headers:{apikey,'content-type':'application/json',accept:'application/json'},
+    body:JSON.stringify({email,create_user:false,code_challenge:codeChallenge,
+     code_challenge_method:'s256'})
+   });
+   // Provider errors are not an account-existence oracle for the browser.
+   await jsonResponse(response);
+   return Object.freeze({requested:true});
+  },
   async exchangeAuthCode({code,codeVerifier,redirectTo:requestedRedirect}={}){
    if(typeof code!=='string'||!PKCE_CODE.test(code)||
       typeof codeVerifier!=='string'||!PKCE_VERIFIER.test(codeVerifier)||

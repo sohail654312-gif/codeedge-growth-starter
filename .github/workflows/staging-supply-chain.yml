@@ -25,6 +25,9 @@ jobs:
         run: |
           node --check staging/server.mjs
           node --check staging/config.mjs
+          node --check staging/phase315m-config.mjs
+          node --check staging/phase315m-server.mjs
+          node --check backend/phase315m-private-runtime.mjs
           node --check staging/hosted-acceptance.mjs
           node --check backend/supabase-staging-identity.mjs
           node --check backend/staging-supabase-gateway.mjs

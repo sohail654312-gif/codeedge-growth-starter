@@ -2,7 +2,10 @@ name: Growth Starter offline SEO UI typecheck
 on:
   push:
     branches: [engineering/phase2-core-security]
+    # All four acceptance workflows must run on every engineering revision.
+    # Avoid a green backend SHA whose offline UI check was silently skipped.
     paths:
+      - '**'
       - 'src/SeoGrowthManager.tsx'
       - 'src/PremiumContentPanel.tsx'
       - 'src/WebsiteProposalDesk.tsx'

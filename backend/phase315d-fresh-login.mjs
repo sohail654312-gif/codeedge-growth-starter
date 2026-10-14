@@ -26,6 +26,24 @@ function payload(token){
   return claim;
  }catch{deny();}
 }
+// Shared by the disposable proof and the restricted private runtime. Decoding
+// alone is never verification: callers must first obtain user from /auth/v1/user.
+export function validateFreshProviderIdentity({accessToken,user,projectUrl,now=Date.now()}={}){
+ const claims=payload(accessToken),t=Math.floor(now/1000);
+ const issuer=new URL(projectUrl).origin+'/auth/v1';
+ if(claims.iss!==issuer||claims.aud!=='authenticated'||claims.role!=='authenticated'||
+    !UUID.test(claims.sub||'')||!UUID.test(claims.session_id||'')||
+    !Number.isSafeInteger(claims.iat)||!Number.isSafeInteger(claims.exp)||
+    claims.iat>t+30||t-claims.iat>120||claims.exp<=t||claims.exp-claims.iat>3600||
+    claims.exp<=claims.iat||claims.is_anonymous===true||
+    (claims.nbf!==undefined&&(!Number.isSafeInteger(claims.nbf)||claims.nbf>t))||
+    !user||user.id!==claims.sub||typeof user.email!=='string'||!user.email||
+    !Number.isFinite(Date.parse(user.email_confirmed_at))||user.is_anonymous===true||
+    user.deleted_at!=null||user.banned_until!=null&&
+    (!Number.isFinite(Date.parse(user.banned_until))||Date.parse(user.banned_until)>now))deny();
+ return Object.freeze({userId:claims.sub,providerSessionId:claims.session_id,
+   expiresAt:claims.exp,email:user.email.toLowerCase()});
+}
 export function createHostedFreshLoginBridge(){
  throw Error('Hosted fresh login unavailable until reviewed provider callback and private credentials.');
 }
@@ -92,20 +110,11 @@ export function createDisposableFreshLoginBridge({
    if(!response||typeof response.accessToken!=='string')deny();
    user=await verifyUser({accessToken:response.accessToken});
   }catch(e){if(e?.message===INVALID)throw e;down();}
-  const claims=payload(response.accessToken),t=Math.floor(now()/1000);
-  if(claims.iss!==issuer||claims.aud!=='authenticated'||
-     claims.role!=='authenticated'||!UUID.test(claims.sub||'')||
-     !UUID.test(claims.session_id||'')||
-     !Number.isSafeInteger(claims.iat)||!Number.isSafeInteger(claims.exp)||
-     claims.iat>t+30||t-claims.iat>120||claims.exp<=t||
-     claims.exp-claims.iat>3600||claims.is_anonymous===true||
-     !user||user.id!==claims.sub||user.email_confirmed_at==null||
-     user.is_anonymous===true||user.deleted_at!=null||
-     user.banned_until!=null && Date.parse(user.banned_until)>now())deny();
+  const identity=validateFreshProviderIdentity({accessToken:response.accessToken,user,projectUrl,now:now()});
   const proof=random();
   unused.set(proof,Object.freeze({
-   freshAuthentication:true,userId:claims.sub,
-   providerSessionId:claims.session_id,
+   freshAuthentication:true,userId:identity.userId,
+   providerSessionId:identity.providerSessionId,
    oneTimeGrantId:matched.one_time_grant_id,
    authenticatedAt:now()
   }));

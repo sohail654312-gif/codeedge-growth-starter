@@ -52,7 +52,7 @@ test('Phase 3.15K exact hosted draft: private gateway function boundaries and ro
   assert.equal(baseline.gateway_business_table_read,false);
   assert.equal(baseline.gateway_can_read_function,true);
   assert.equal(baseline.gateway_can_revoke_function,true);
-  assert.equal(baseline.private_policies,6);
+  assert.equal(baseline.private_policies,3);
   assert.equal(baseline.owned_definer_functions,2);
   // Standalone throwaway PG doesn't have Supabase built-in anon and
   // authenticated roles; if absent, identity checks are replaced with

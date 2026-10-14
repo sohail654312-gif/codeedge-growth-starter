@@ -2,10 +2,11 @@ import {useMemo,useState} from 'react';
 import {BookOpen,Download,FileText,ShieldCheck} from 'lucide-react';
 import type {SeoReport} from '../backend/seo-growth.mjs';
 import type {SearchAnalysis} from '../backend/seo-search-data.mjs';
-import {buildPremiumContentStrategy,exportPremiumStrategyCsv} from '../backend/premium-content-intelligence.mjs';
+import {exportPremiumStrategyCsv} from '../backend/premium-content-intelligence.mjs';
+import {buildOfflineContentToolkit,serializeStructuredData} from '../backend/offline-content-toolkit.mjs';
 import './premium-content.css';
 import WebsiteProposalDesk from './WebsiteProposalDesk';
-type Tab='seo'|'geo'|'aeo'|'sco'|'social'|'website';
+type Tab='seo'|'geo'|'aeo'|'sco'|'social'|'website'|'schema'|'calendar'|'duplicates';
 function saveOffline(name:string,value:string,mime:string){
  const url=URL.createObjectURL(new Blob([value],{type:mime}));
  try{const link=document.createElement('a');link.href=url;link.download=name;link.click();}
@@ -17,16 +18,17 @@ export default function PremiumContentPanel({seoReport,searchAnalysis=null}:{
  const [tab,setTab]=useState<Tab>('seo');
  const [expanded,setExpanded]=useState(0);
  const state=useMemo(()=>{
-  if(!seoReport)return {plan:null,error:''};
-  try{return {plan:buildPremiumContentStrategy({seoReport,searchAnalysis}),error:''};}
-  catch(e){return {plan:null,error:e instanceof Error?e.message:'Content plan unavailable.'};}
+  if(!seoReport)return {plan:null,toolkit:null,error:''};
+  try{const toolkit=buildOfflineContentToolkit({seoReport,searchAnalysis});return {plan:toolkit.strategy,toolkit,error:''};}
+  catch(e){return {plan:null,toolkit:null,error:e instanceof Error?e.message:'Content plan unavailable.'};}
  },[seoReport,searchAnalysis]);
  const plan=state.plan;
  const menu:Array<{id:Tab;label:string}>=[
   {id:'seo',label:'SEO strategy'},{id:'geo',label:'GEO readiness'},
   {id:'aeo',label:'Answers & FAQ'},{id:'sco',label:'SCO & local'},
   {id:'social',label:'Social content'},
-  {id:'website',label:'Website changes'}
+  {id:'website',label:'Website changes'},{id:'schema',label:'Schema drafts'},
+  {id:'calendar',label:'Content calendar'},{id:'duplicates',label:'Duplicate review'}
  ];
  return <section className="pci" aria-label="Premium SEO GEO AEO and content intelligence">
   <header className="pci-top">
@@ -117,6 +119,28 @@ export default function PremiumContentPanel({seoReport,searchAnalysis=null}:{
    </article>}
    {tab==='website'&&seoReport&&<article className="pci-section">
     <WebsiteProposalDesk seoReport={seoReport} premiumPlan={plan}/>
+   </article>}
+   {tab==='schema'&&state.toolkit&&<article className="pci-section">
+    <h4>Structured data for owner review</h4>
+    <p>Draft from supplied business facts. FAQ schema needs confirmed, visible questions and accurate answers; generated answer drafts are excluded. This checks a supported subset and makes no rich-result claim.</p>
+    {state.toolkit.schemaDrafts.map((draft,index)=><div key={index}>
+     <pre className="pci-code" tabIndex={0} aria-label="Structured data JSON draft">{serializeStructuredData(draft)}</pre>
+     <button type="button" onClick={()=>saveOffline('codeedge-schema-draft-'+index+'.json',serializeStructuredData(draft),'application/ld+json')}>Download schema draft</button>
+    </div>)}
+   </article>}
+   {tab==='calendar'&&state.toolkit&&<article className="pci-section">
+    <h4>A proposed content calendar</h4><p>Dates use UTC and start from the report date. These entries are review proposals; no provider has scheduled or approved them.</p>
+    <ol className="pci-calendar">{state.toolkit.calendar.map(item=><li key={item.id}>
+     <time dateTime={item.date}>{item.date}</time><div><strong>{item.channel} · {item.priority} priority</strong>
+     <p>{item.title}</p><small>{item.evidence.replace(/_/g,' ')} · Requires review</small></div></li>)}</ol>
+    <button type="button" onClick={()=>saveOffline('codeedge-content-calendar.json',JSON.stringify(state.toolkit?.calendar,null,2),'application/json')}>Download proposed calendar</button>
+   </article>}
+   {tab==='duplicates'&&state.toolkit&&<article className="pci-section">
+    <h4>Review similar supplied extracts</h4><p>{state.toolkit.duplicates.comparedPages} supplied extracts compared using three-word overlap. Boilerplate can cause similarity; this does not establish live duplication.</p>
+    {state.toolkit.duplicates.pairs.length===0?<p>No pairs met the configured overlap threshold in these extracts.</p>:
+     state.toolkit.duplicates.pairs.map((pair,index)=><div className="pci-draft pci-break" key={index}>
+      <strong>Calculated extract similarity: {Math.round(pair.similarity*100)}%</strong><p>{pair.pages.join(' · ')}</p><small>{pair.review}</small></div>)}
+    {state.toolkit.duplicates.truncatedPages.length>0&&<p>Long extracts were limited to the first 1,000 words.</p>}
    </article>}
    <div className="pci-actions">
     <button type="button" onClick={()=>saveOffline('codeedge-premium-content-plan.json',JSON.stringify(plan,null,2),'application/json')}><Download size={15}/> Full JSON plan</button>

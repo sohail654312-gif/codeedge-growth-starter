@@ -32,7 +32,7 @@ before(async()=>{
  await pool.query(`INSERT INTO growth_starter.work_requests(workspace_id,id,title,kind,updated_at)
   SELECT CASE WHEN n%2=0 THEN $1 ELSE $2 END,'bench_'||n,'Fictional benchmark','Other',now()-n*interval '1 second' FROM generate_series(1,10000)n`,[ws,wsB]);
  await pool.query('ANALYZE growth_starter.work_requests');
- const explain=async()=> (await pool.query(`EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) SELECT id FROM growth_starter.work_requests WHERE workspace_id=$1 ORDER BY updated_at DESC,id DESC LIMIT 20`,[ws])).rows[0]['QUERY PLAN'][0];
+ const explain=async()=> (await pool.query(`EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) SELECT *,to_char(updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_at FROM growth_starter.work_requests WHERE workspace_id=$1 ORDER BY updated_at DESC,id DESC LIMIT 20`,[ws])).rows[0]['QUERY PLAN'][0];
  const baseline=[];for(let i=0;i<5;i++)baseline.push(await explain());
  await pool.query(readFileSync('db/drafts/phase315o_operations_REVIEW_ONLY.sql','utf8'));
  await pool.query('ANALYZE growth_starter.work_requests');

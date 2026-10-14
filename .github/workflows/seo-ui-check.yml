@@ -62,7 +62,7 @@ permissions:
 jobs:
   seo-ui-typecheck:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -85,3 +85,22 @@ jobs:
           node --check backend/pilot-review-pack.mjs
           node --check backend/pilot-review-demo.mjs
           node --test tests/seo-growth.test.mjs tests/seo-search-data.test.mjs tests/premium-content-intelligence.test.mjs tests/website-proposals.test.mjs
+      - name: Install and audit pinned isolated browser QA dependencies
+        run: |
+          npm ci --prefix tests/ui --ignore-scripts --no-fund
+          npm audit --prefix tests/ui --audit-level=high
+      - name: Install disposable Chromium browser
+        working-directory: tests/ui
+        run: npx playwright install --with-deps chromium
+      - name: Mobile, desktop and accessibility regression checks
+        working-directory: tests/ui
+        run: npm test
+      - name: Save browser regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-browser-qa
+          path: |
+            work/phase315o-browser-results.json
+            tests/ui/test-results/
+          if-no-files-found: warn

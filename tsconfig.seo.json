@@ -11,6 +11,8 @@
     "backend/seo-search-data.d.mts",
     "backend/search-fixtures.d.mts",
     "src/PremiumContentPanel.tsx",
+    "src/WorkProgress.tsx",
+    "backend/offline-content-toolkit.d.mts",
     "backend/premium-content-intelligence.d.mts",
     "src/WebsiteProposalDesk.tsx",
     "backend/website-proposals.d.mts"

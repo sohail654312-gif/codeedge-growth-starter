@@ -57,6 +57,7 @@ test('reject malicious origins, redirect substitution and private keys',async()=
   {callbackUrl:'http://clinic.example.invalid/auth/callback'},
   {callbackUrl:'https://clinic.example.invalid/auth/callback?next=https://x'},
   {publishableKey:'sk_private_not_permitted'},
+  {publishableKey:'eyJ'+ 'A'.repeat(52)},
   {publishableKey:'sb_secret_'+ 'Z'.repeat(30)},
   {fetchImpl:null}
  ])assert.throws(()=>createSupabasePkceHttpAdapter({

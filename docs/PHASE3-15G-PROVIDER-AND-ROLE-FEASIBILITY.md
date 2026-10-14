@@ -2,7 +2,7 @@
 
 ## Source-only work, not a hosted cutover
 - Added `backend/phase315g-supabase-pkce-adapter.mjs`, a production-shaped, injectable HTTP adapter for Supabase Auth: POST `/auth/v1/token?grant_type=pkce` with server-held authorization-code verifier, then GET `/auth/v1/user` with the **exact exchanged** access token.
-- Adapter validates trusted Supabase HTTPS project origin and fixed application callback path, accepts only publishable/legacy public key shape, disables redirects and caches, bounds network timeouts and response size, and returns **no refresh token**.
+- Adapter validates trusted Supabase HTTPS project origin and fixed application callback path, accepts only modern `sb_publishable_` keys (legacy JWT API keys require separate review, because a service-role JWT must never be accepted), disables redirects and caches, bounds network timeouts and response size, and returns **no refresh token**.
 - The adapter is **not wired into any hosting entrypoint**, production constructor or deployed Edge Function. Phase 3.15D and Phase 3.15E remain synthetic until real Supabase authentication is verified against separately approved fictional users. A successful `getUser` call does not establish prior-session revocation.
 - Tests: `tests/phase315g-supabase-pkce-adapter.test.mjs` uses an injected mock HTTP client. It is not a real provider exchange.
 

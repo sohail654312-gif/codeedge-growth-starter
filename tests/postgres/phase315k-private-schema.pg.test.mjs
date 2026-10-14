@@ -123,7 +123,9 @@ test('Phase 3.15K exact hosted draft: private gateway function boundaries and ro
     "'growth_starter_private.read_requests(text,text,integer)','EXECUTE') AS ok")).rows[0].ok,false);
   assert.equal((await admin.query("SELECT rolcanlogin FROM pg_roles "+
     "WHERE rolname='gs315k_gateway'")).rows[0].rolcanlogin,false);
-  await assert.rejects(read(gateway,sc.token,WA),perm);
+  await assert.rejects(read(gateway,sc.token,WA),
+   e=>e?.code==='42501'||e?.code==='28000',
+   'After NOLOGIN, both existing sessions and new logins must be denied');
  }finally{
   if(gateway)await gateway.end();
   if(privateReady)await admin.query('DROP SCHEMA growth_starter_private CASCADE');

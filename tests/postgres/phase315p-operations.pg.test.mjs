@@ -46,7 +46,15 @@ before(async()=>{
  for(const [u,role] of [[C,'staff'],[D,'client']])await setup.query('INSERT INTO growth_starter.memberships(workspace_id,user_id,owner_user_id,role,created_by) VALUES($1,$2,$3,$4,$3)',[WA,u,A,role]);
 });
 after(async()=>{
- await pool?.end();await setup.end();if(created)await admin.query('DROP DATABASE '+db+' WITH (FORCE)');
+ await pool?.end();await setup.end();
+ if(created){
+  // A forced DROP hid leaked idle connections and emitted an uncaught pg.Pool
+  // backend-termination event after the suite had already finished.
+  // Require all pools to close and fail explicitly if a connection remains.
+  const count=(await admin.query('SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=$1',[db])).rows[0].n;
+  assert.equal(count,0,'Disposable database still has open connections after pool shutdown.');
+  await admin.query('DROP DATABASE '+db);
+ }
  for(const r of [...roles].reverse())if((await admin.query('SELECT FROM pg_roles WHERE rolname=$1',[r])).rowCount)await admin.query('DROP ROLE '+r);
  await admin.end();
 });

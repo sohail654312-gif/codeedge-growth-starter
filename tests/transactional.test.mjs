@@ -120,6 +120,10 @@ test('transactional store capabilities required, cannot use AppDeploy list/updat
 });
 test('atomic request state revisions reject stale and conflicting approvals',async()=>{
   const x=createFixture();
+  // A real client decision requires current database membership, not a role hint.
+  const invite=await x.members.issue({actor:owner,workspaceId,email:client.email,role:'client'});
+  await x.members.accept({actor:client,token:invite.token});
+  const auditBaseline=x.store.auditCount();
   const record={id:'request1',status:'Requested',version:0,title:'Synthetic clinic campaign'};
   x.store.seedRequest(record.id,record);
   const own={workspaceId,role:'owner'};
@@ -137,7 +141,19 @@ test('atomic request state revisions reject stale and conflicting approvals',asy
   assert.equal(approved.version,3);
   await assert.rejects(x.workflow.decision({workspace:{workspaceId,role:'client'},actor:client.userId,id:record.id,decision:'Changes requested',expectedVersion:2}),e=>e.status===409);
   assert.equal(x.store.getRequest(record.id).status,'Approved');
-  assert.equal(x.store.auditCount(),3);
+  assert.equal(x.store.auditCount(),auditBaseline+3);
+});
+test('forged owner role, foreign actor and revoked membership cannot transition requests',async()=>{
+ const x=createFixture();x.store.seedRequest('secured',{id:'secured',status:'Requested',version:0});
+ await assert.rejects(x.workflow.review({workspace:{workspaceId,role:'owner'},actor:client.userId,
+  id:'secured',requested:'In progress',expectedVersion:0}),e=>e.status===403);
+ const invitation=await x.members.issue({actor:owner,workspaceId,email:staff.email,role:'staff'});
+ await x.members.accept({actor:staff,token:invitation.token});
+ await x.members.revoke({actor:owner,workspaceId,userId:staff.userId});
+ const before=x.store.auditCount();
+ await assert.rejects(x.workflow.review({workspace:{workspaceId,role:'owner'},actor:staff.userId,
+  id:'secured',requested:'In progress',expectedVersion:0}),e=>e.status===403);
+ assert.equal(x.store.getRequest('secured').version,0);assert.equal(x.store.auditCount(),before);
 });
 test('failed transaction rolls back request state and audit',async()=>{
   const x=createFixture();

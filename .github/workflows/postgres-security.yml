@@ -39,3 +39,10 @@ jobs:
           node --check backend/image-inspector.mjs
       - name: Real database transactions and signed synthetic HTTP sessions
         run: node --test --test-concurrency=1 tests/postgres/*.test.mjs
+      - name: Save reproducible PostgreSQL query measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: disposable-pg17-performance
+          path: work/phase315o-pg-performance.json
+          if-no-files-found: error

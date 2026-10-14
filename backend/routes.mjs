@@ -2,14 +2,17 @@ import {
   DomainError, ownerWorkspaceId, tableFor, resolveWorkspace, profileInput,
   enquiryInput, requestInput, statusInput, pageArgs, validateImageUpload, validGrant, reviewRequestTransition, clientRequestDecision, validRecordId
 } from './core.mjs';
+import {makeWorkspaceOperationRoutes} from './workspace-routes.mjs';
 
 // The SDK primitives are dependency-injected so the exact route handlers can
 // be tested against a deterministic fake without production credentials.
-export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,cryptoRandomUUID,trustedMembership=null,workflowMutations=null,mediaLifecycle=null}) {
+export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,cryptoRandomUUID,trustedMembership=null,workflowMutations=null,mediaLifecycle=null,workspaceOperations=null}) {
   const protect=requireAuth();
-  async function safe(ctx,action,fn) {
+  async function safe(ctx,action,fn,atomic=false) {
     try {
       const workspace=await resolveWorkspace(ctx,db,action,trustedMembership);
+      if(workspace.role!=='owner'&&!atomic)
+        throw new DomainError('Shared operations require transactional authorization.',503);
       return await fn(workspace);
     } catch (caught) {
       if(caught instanceof DomainError) return error(caught.message,caught.status);
@@ -36,6 +39,7 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
     }
   }
   return {
+    ...makeWorkspaceOperationRoutes({requireAuth,json,error,workspaceOperations}),
     'GET /api/_healthcheck': [async () => json({status:'ok'})],
     'GET /api/workspaces': [
       protect,
@@ -141,7 +145,7 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
         const result=await workflowMutations.review({workspace,actor:ctx.user.userId,id,
           requested:ctx.body?.status,expectedVersion:ctx.body?.version});
         return json(result);
-      })
+      },true)
     ],
     'POST /api/requests/:id/decision': [
       protect,
@@ -151,7 +155,7 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
           id:validRecordId(ctx.params?.id),decision:ctx.body?.decision,
           expectedVersion:ctx.body?.version});
         return json(result);
-      })
+      },true)
     ],
     'DELETE /api/assets/:id': [
       protect,
@@ -161,7 +165,7 @@ export function makeGrowthStarterRoutes({db,storage,requireAuth,json,error,crypt
         if(!mediaLifecycle?.capabilities?.durableDeletion) return error('Durable media deletion is not yet available.',503);
         return await mediaLifecycle.remove({workspace,actor:ctx.user.userId,
           id:validRecordId(ctx.params?.id),json,error});
-      })
+      },true)
     ],
     'POST /api/assets': [
       protect,

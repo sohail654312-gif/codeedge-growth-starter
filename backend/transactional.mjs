@@ -138,11 +138,12 @@ export function createTransactionalWorkflowService({store,clock=()=>Date.now()})
     async review({workspace,actor,id,requested,expectedVersion}) {
       validRecordId(id);uid(actor);
       return store.transaction(async tx=>{
+        const live=await authorizeTransactionalActor(tx,workspace.workspaceId,actor,'request:review');
         const request=await tx.lockRequest(workspace.workspaceId,id);
         if(!request)throw new DomainError('Request not found.',404);
         if(!Number.isSafeInteger(expectedVersion)||request.version!==expectedVersion)
           throw new DomainError('Request version changed; refresh before saving.',409);
-        const status=reviewRequestTransition(request.status,requested,workspace.role);
+        const status=reviewRequestTransition(request.status,requested,live.role);
         const updated={...request,status,version:request.version+1,reviewedBy:actor,updatedAt:clock()};
         await tx.updateRequest(workspace.workspaceId,id,updated);
         await tx.audit({workspaceId:workspace.workspaceId,actorId:actor,action:'request.review',target:id,at:clock()});
@@ -152,11 +153,12 @@ export function createTransactionalWorkflowService({store,clock=()=>Date.now()})
     async decision({workspace,actor,id,decision,expectedVersion}) {
       validRecordId(id);uid(actor);
       return store.transaction(async tx=>{
+        const live=await authorizeTransactionalActor(tx,workspace.workspaceId,actor,'request:decide');
         const request=await tx.lockRequest(workspace.workspaceId,id);
         if(!request)throw new DomainError('Request not found.',404);
         if(!Number.isSafeInteger(expectedVersion)||request.version!==expectedVersion)
           throw new DomainError('Request version changed; refresh before saving.',409);
-        const status=clientRequestDecision(request.status,decision,workspace.role);
+        const status=clientRequestDecision(request.status,decision,live.role);
         const updated={...request,status,version:request.version+1,decidedBy:actor,updatedAt:clock()};
         await tx.updateRequest(workspace.workspaceId,id,updated);
         await tx.audit({workspaceId:workspace.workspaceId,actorId:actor,action:'request.decision',target:id,at:clock()});
@@ -164,4 +166,24 @@ export function createTransactionalWorkflowService({store,clock=()=>Date.now()})
       });
     }
   });
+}
+// Role hints from HTTP, a previously resolved membership, or a UI are not
+// authorization. Lock workspace -> membership -> request in that order.
+export async function authorizeTransactionalActor(tx,workspaceId,actorId,action){
+ const id=ensureWorkspace(workspaceId),actor=uid(actorId);
+ if(typeof tx?.lockWorkspace!=='function'||typeof tx?.lockMembership!=='function')
+  throw new DomainError('Transactional authorization unavailable.',503);
+ const workspace=await tx.lockWorkspace(id);
+ if(!workspace||workspace.state!=='active'||workspace.id!==id||
+    id!==ownerWorkspaceId(workspace.ownerUserId))throw new DomainError('Workspace access denied.',403);
+ let role='owner';
+ if(workspace.ownerUserId!==actor){
+  const member=await tx.lockMembership(id,actor);
+  if(!member||member.state!=='active'||member.workspaceId!==id||member.userId!==actor||
+     member.ownerUserId!==workspace.ownerUserId||!['agency_admin','staff','client'].includes(member.role))
+   throw new DomainError('Workspace access denied.',403);
+  role=member.role;
+ }
+ authorize(role,action);
+ return Object.freeze({workspaceId:id,ownerUserId:workspace.ownerUserId,role,userId:actor});
 }

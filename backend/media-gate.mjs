@@ -12,11 +12,10 @@ export function createMediaGate({store,authorizer}) {
     },
     async lookup({actorUserId,workspaceId,id}) {
       if(typeof actorUserId!=='string')throw new DomainError('Unauthorized.',403);
-      if(workspaceId!==ownerWorkspaceId(actorUserId)) {
-        await authorizer.authorize({userId:actorUserId,workspaceId});
-      }
-      // PG checks consent, scan, rights, lifecycle & exact workspace in SQL.
-      const object=await store.getReadyMedia({workspaceId,id});
+      if(store.capabilities?.atomicMediaAuthorization!==true||!store.authorizedReadyMedia)
+        throw new DomainError('Transactional media authorization required.',503);
+      // The actor, workspace and consent are checked in the same transaction.
+      const object=await store.authorizedReadyMedia({workspaceId,id,actorUserId});
       if(!object)throw new DomainError('Media not available.',404);
       if(typeof object.storage_key!=='string'||!object.storage_key.startsWith('growth-starter/'+workspaceId+'/'))
         throw new DomainError('Media ownership violation.',403);

@@ -8,4 +8,5 @@ cryptoRandomUUID:()=>string;
 trustedMembership?:{capabilities:{authoritativeRead:boolean};authorize:(params:{userId:string;workspaceId:string})=>Promise<unknown>;list:(params:{userId:string})=>Promise<unknown[]>}|null;
 workflowMutations?:{capabilities:{atomicTransitions:boolean};review:(args:any)=>Promise<any>;decision:(args:any)=>Promise<any>}|null;
 mediaLifecycle?:{capabilities:{durableDeletion:boolean};remove:(args:any)=>Promise<any>}|null;
+workspaceOperations?:{capabilities:{transactionalAuthorization:boolean;persistentOperations:boolean};[key:string]:any}|null;
 }): Record<string,any[]>;

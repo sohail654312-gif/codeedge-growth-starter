@@ -249,7 +249,7 @@ test('private image delete checks role, workspace, and stored owner path',async(
   assert.equal(removed.status,503);
   assert.equal(x.rows(tableFor('assets',alice)).length,1);
 });
-test('trusted server-injected membership verifies exact tenant and limits client rights',async()=>{
+test('trusted membership verifies discovery but cannot enable non-atomic shared SDK reads',async()=>{
   const grant={userId:bob,ownerUserId:alice,workspaceId:workspaceA,role:'client',state:'active'};
   const trustedMembership={capabilities:{authoritativeRead:true},
     authorize:async({userId,workspaceId})=>userId===bob&&workspaceId===workspaceA?grant:null,
@@ -258,9 +258,8 @@ test('trusted server-injected membership verifies exact tenant and limits client
   const created=await x.call('POST','/api/enquiries',{user:alice,body:{name:'Synthetic prospect',service:'ENT'}});
   assert.equal(created.status,201);
   const read=await x.call('GET','/api/overview',{user:bob,query:{workspaceId:workspaceA}});
-  assert.equal(read.status,200);
-  assert.equal(read.data.role,'client');
-  assert.equal(read.data.enquiries[0].name,'Synthetic prospect');
+  assert.equal(read.status,503);
+  assert.match(read.data.error,/transactional authorization/);
   const denied=await x.call('PUT','/api/enquiries/:id',{user:bob,query:{workspaceId:workspaceA},params:{id:created.data.id},body:{status:'Won'}});
   assert.equal(denied.status,403);
   const listed=await x.call('GET','/api/workspaces',{user:bob});

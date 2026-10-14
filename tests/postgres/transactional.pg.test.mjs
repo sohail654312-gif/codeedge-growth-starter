@@ -88,6 +88,10 @@ test('real serializable DB serializes conflicting versioned request approvals',a
   assert.equal(updated.version,2);
   await assert.rejects(workflow.decision({workspace:{workspaceId:wsA,role:'staff'},actor:client.userId,
     id:'syntheticReqA',decision:'Approved',expectedVersion:2}),err=>err.status===403);
+  // The previous test revoked this principal. A new verified invitation must
+  // restore membership before a legitimate decision; role hints cannot do so.
+  const renewed=await member.issue({actor:ownerA,workspaceId:wsA,email:client.email,role:'client'});
+  await member.accept({actor:client,token:renewed.token});
   const decision=await workflow.decision({workspace:{workspaceId:wsA,role:'client'},actor:client.userId,
     id:'syntheticReqA',decision:'Changes requested',expectedVersion:2});
   assert.equal(decision.version,3);
@@ -174,11 +178,12 @@ test('real DB outbox processes durable image deletion with retry and idempotent 
   assert.equal(first[0].mediaId,'syntheticImage1');
   const noDoubleClaim=await store.claimDeleteBatch(1);
   assert.equal(noDoubleClaim.length,0);
-  await store.retryMediaDeletion({outboxId:first[0].outboxId});
+  await store.retryMediaDeletion({outboxId:first[0].outboxId,attempts:first[0].attempts});
   const retried=await store.claimDeleteBatch(1);
   assert.equal(retried.length,1);
   assert.equal(retried[0].attempts,2);
-  const completed=await store.acknowledgeMediaDeletion({outboxId:retried[0].outboxId,storageKey:retried[0].storageKey});
+  await assert.rejects(store.acknowledgeMediaDeletion({outboxId:retried[0].outboxId,storageKey:retried[0].storageKey,attempts:first[0].attempts}),e=>e.status===409);
+  const completed=await store.acknowledgeMediaDeletion({outboxId:retried[0].outboxId,storageKey:retried[0].storageKey,attempts:retried[0].attempts});
   assert.equal(completed.done,true);
   const done=await pool.query(`SELECT o.state,m.lifecycle FROM growth_starter.media_delete_outbox o
     JOIN growth_starter.media m ON m.workspace_id=o.workspace_id AND m.id=o.media_id

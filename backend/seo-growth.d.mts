@@ -15,7 +15,7 @@ export type SeoTask={
 };
 export type SeoReport={
  version:string;workspaceId:string;business:SeoBusiness;instruction:string;generatedAt:string;mode:string;
- siteAudit:{pages:Array<{url:string;status:number;title:string;h1:string[];missingAlt:number;source:string}>;
+ siteAudit:{pages:Array<{url:string;status:number;title:string;h1:string[];missingAlt:number;source:string;contentSample?:string}>;
  findings:SeoTask[];directives:{status:string;robotsTxtPresent:boolean;sitemapXmlPresent:boolean;allPagesBlockedByRobots:boolean;sitemapReferences:Array<{url:string;inScope:boolean}>;sitemapPaths:string[]}};keywords:KeywordSuggestion[];aeo:Array<{id:string;question:string;answerDraft:string;
  status:string;assumptions:string[];evidence:string;targetPage:string|null}>;
  tasks:SeoTask[];cannibalisationWarnings:string[];

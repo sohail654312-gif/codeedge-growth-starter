@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-14T16:38:19.159Z",
+  "repository": "sohail654312-gif/codeedge-growth-starter",
+  "branch": "engineering/phase2-core-security",
+  "commitSha": "b8180c80d4654c186ba6fabccfcc992a1270b94c",
+  "evidenceSource": "Fetched directly from GitHub REST over HTTPS; no manual CI attestation accepted.",
+  "tests": {
+    "core": "source-guards.yml",
+    "disposablePostgres17": "postgres-security.yml",
+    "uiAndSeo": "seo-ui-check.yml",
+    "buildAndSupplyChain": "staging-supply-chain.yml"
+  },
+  "database": {
+    "requiredMajor": 17,
+    "hostedVersionLastReadOnly": "17.11",
+    "hostedMigrationHistory": [
+      "20261008141834",
+      "20261008141846",
+      "20261008143234",
+      "20261008145300",
+      "20261008145917",
+      "20261010063818",
+      "20261010063911"
+    ],
+    "inventory": [
+      {
+        "path": "db/migrations/0001_growth_starter.sql",
+        "sha256": "87d93520124963af26e3c36e6d320899d39b8b804c9e423fd3de46fa0a94976c",
+        "reviewOnly": false
+      },
+      {
+        "path": "db/migrations/0002_staging_readonly.sql",
+        "sha256": "0cceca2598e153bc09f62fc20ae288c23d07a80d03a8ad46a5ad79b336918131",
+        "reviewOnly": false
+      },
+      {
+        "path": "db/migrations/0003_staging_default_deny_rls.sql",
+        "sha256": "9f3b17ace2d797f54fb308b657be888b3dee8a4881f11483b9f45d41da542b91",
+        "reviewOnly": false
+      },
+      {
+        "path": "db/migrations/0004_prepare_runtime_role.sql",
+        "sha256": "f1f33d55000ee6c33009d370cd386b542d362b37adebeec25d06a7507cae3441",
+        "reviewOnly": false
+      },
+      {
+        "path": "db/migrations/0005_staging_auth_session_probe.sql",
+        "sha256": "e3a6cd16c6018d24ce32424fd377f67bb42304bf2c0d87d7e4ab2cf6683cfd5c",
+        "reviewOnly": false
+      },
+      {
+        "path": "db/drafts/0006_seo_reports_REVIEW_ONLY.sql",
+        "sha256": "bdfbe33ca070633f94f193b91e6a1362698744c369c7cd9e55d0c583e8fa262e",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/0007_disable_legacy_actor_definers_REVIEW_ONLY.sql",
+        "sha256": "c9e4e4d93bc321dbcb2b499cd71f34e088c158339b5d78941469b244bc467da3",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/0008_authenticated_read_rls_REVIEW_ONLY.sql",
+        "sha256": "5abf5cd131b779c1cc8a9c5eaa8d04c3f3c4b785e83cd6c35fc8fe9126285ce2",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/0009_cutover_assertions_REVIEW_ONLY.sql",
+        "sha256": "8c8c55fdee7d2ec7273b8f50da6c64d383d699e3425c74016f2763d51a5c65e7",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/0010_session_checker_minimal_auth_columns_REVIEW_ONLY.sql",
+        "sha256": "811b3f0fc83496f7ac0a40b0c4162d64d065b4a67c65dec578f4b975d7718b3b",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315j_cutover_assertions_REVIEW_ONLY.sql",
+        "sha256": "a44aa464c3f2a8d2c7fca91ef65dec93bc74decc1739eb0b2d54dd02b6f71f43",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315j_direct_api_legacy_cutover_REVIEW_ONLY.sql",
+        "sha256": "f58f448c13785c1d3ce12be0f4d6123581af87bc5ed8fc1bba2ff856f8dc876a",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315k_lockdown_REVIEW_ONLY.sql",
+        "sha256": "5854e6dfa6351706b8bb8c4a1fa0d5e276e2b26ed4ecce7f83df1d494a7bc792",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315k_private_sessions_REVIEW_ONLY.sql",
+        "sha256": "1be4874de614cf773d5eff829635c16850b946e994b8c7752f82370909ae0d6d",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315m_lockdown_REVIEW_ONLY.sql",
+        "sha256": "11fcfad765a6774bc7e68508d1499ad61bb069ec1f4ef3c85433291c9ddd08c0",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315m_private_issuer_REVIEW_ONLY.sql",
+        "sha256": "6a54e1c51db6e69bda0047653e1703aeb151f7d9a889eaca5e8d0e6d1d764beb",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315o_operations_REVIEW_ONLY.sql",
+        "sha256": "b4de596cc0f74a6d1b5a9360c883edd44b244fcc3c26d387bd77df0d3e84591d",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315p_lockdown_REVIEW_ONLY.sql",
+        "sha256": "c7b9dfad04dda588a9b243e98001572222f7194a6122274dbf5688f259d15761",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315p_operations_REVIEW_ONLY.sql",
+        "sha256": "81227ab2f49721478c07a9a9dddea5baf8841d3d56881d5630ff4689fba402ab",
+        "reviewOnly": true
+      },
+      {
+        "path": "db/drafts/phase315p_postflight_REVIEW_ONLY.sql",
+        "sha256": "8315a3e930014b35e42c0b0b83ec032778450d187761e424450713ce2a389308",
+        "reviewOnly": true
+      }
+    ],
+    "dependencyOrder": [
+      {
+        "path": "db/drafts/phase315o_operations_REVIEW_ONLY.sql",
+        "sha256": "b4de596cc0f74a6d1b5a9360c883edd44b244fcc3c26d387bd77df0d3e84591d"
+      },
+      {
+        "path": "db/drafts/phase315k_private_sessions_REVIEW_ONLY.sql",
+        "sha256": "1be4874de614cf773d5eff829635c16850b946e994b8c7752f82370909ae0d6d"
+      },
+      {
+        "path": "db/drafts/phase315m_private_issuer_REVIEW_ONLY.sql",
+        "sha256": "6a54e1c51db6e69bda0047653e1703aeb151f7d9a889eaca5e8d0e6d1d764beb"
+      },
+      {
+        "path": "db/drafts/phase315p_operations_REVIEW_ONLY.sql",
+        "sha256": "81227ab2f49721478c07a9a9dddea5baf8841d3d56881d5630ff4689fba402ab"
+      }
+    ]
+  },
+  "securityChecks": {
+    "exactSessionBoundary": "fail_closed_source_tested",
+    "hostedProviderVerified": false,
+    "writerCatalog": "effective_role/function/RLS_verifier_in_PG17",
+    "legacyBypass": "hosted_cutover_pending"
+  },
+  "unsupportedAssumptions": [
+    "A signed JWT or getUser/getClaims alone proves immediate exact-session revocation.",
+    "A Codeedge logout proves Supabase global/admin logout synchronization.",
+    "Disposable timings prove production latency."
+  ],
+  "providerDependencies": [
+    "SU-502526",
+    "SU-503988",
+    "Written supported least-privilege exact-session and account-policy contract"
+  ],
+  "hostingDependencies": [
+    "Approved provider",
+    "Canonical HTTPS hostname",
+    "Trusted ingress",
+    "Secure credentials and authority module"
+  ],
+  "requiredApprovals": [
+    "Independent database/authentication review",
+    "Exact staging grant/migration/cutover approval",
+    "Controlled fictional hosted accounts",
+    "Deployment approval",
+    "Production release approval"
+  ],
+  "rollback": {
+    "strategy": "close_ingress_revoke_private_execute_retain_legacy_deny_all",
+    "disposableProofWorkflow": "postgres-security.yml",
+    "hostedVerified": false
+  },
+  "source": {
+    "verdict": "BLOCKED",
+    "blockers": [
+      "Tracked source differs from evaluated commit."
+    ],
+    "workflows": [
+      {
+        "workflow": "source-guards.yml",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38553583702",
+        "runId": 38553583702
+      },
+      {
+        "workflow": "postgres-security.yml",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38553583555",
+        "runId": 38553583555
+      },
+      {
+        "workflow": "seo-ui-check.yml",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38553583779",
+        "runId": 38553583779
+      },
+      {
+        "workflow": "staging-supply-chain.yml",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/sohail654312-gif/codeedge-growth-starter/actions/runs/38553583805",
+        "runId": 38553583805
+      }
+    ]
+  },
+  "hostedStaging": {
+    "verdict": "BLOCKED",
+    "blockers": [
+      "Supported exact provider-session/account-policy authority is unverified.",
+      "Authorized host and canonical HTTPS hostname are missing.",
+      "Restricted credentials, reviewed migrations and legacy cutover have not been activated.",
+      "Actual Data API exposure and signed REST/GraphQL bypass probes are unverified.",
+      "Actual PKCE A/B/C login, revocation, media, failure and recovery acceptance are unverified."
+    ]
+  },
+  "production": {
+    "verdict": "BLOCKED",
+    "blockers": [
+      "Supported exact provider-session/account-policy authority is unverified.",
+      "Authorized host and canonical HTTPS hostname are missing.",
+      "Restricted credentials, reviewed migrations and legacy cutover have not been activated.",
+      "Actual Data API exposure and signed REST/GraphQL bypass probes are unverified.",
+      "Actual PKCE A/B/C login, revocation, media, failure and recovery acceptance are unverified.",
+      "Independent reviewer approval, owner release approval and live operational acceptance are missing."
+    ]
+  },
+  "finalVerdict": "BLOCKED"
+}

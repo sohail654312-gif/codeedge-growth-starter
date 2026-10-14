@@ -21,6 +21,11 @@ jobs:
       - name: Audit runtime dependencies
         working-directory: staging
         run: npm audit --omit=dev --audit-level=high
+      - name: Audit locked source and private UI dependencies
+        run: |
+          npm ci --ignore-scripts --no-fund
+          npm audit --audit-level=high
+          node scripts/phase315p-migration-bundle.mjs
       - name: Staging syntax and TLS configuration regressions
         run: |
           node --check staging/server.mjs

@@ -1,0 +1,14 @@
+{
+  "status": "REVIEW_ONLY",
+  "projectRef": "dbppeymhsemvghbvuvof",
+  "databaseMajor": 17,
+  "disposableBaseline": "db/migrations/0001_growth_starter.sql",
+  "hostedMigrationHistory": ["20261008141834", "20261008141846", "20261008143234", "20261008145300", "20261008145917", "20261010063818", "20261010063911"],
+  "orderedDrafts": [
+    "db/drafts/phase315o_operations_REVIEW_ONLY.sql",
+    "db/drafts/phase315k_private_sessions_REVIEW_ONLY.sql",
+    "db/drafts/phase315m_private_issuer_REVIEW_ONLY.sql",
+    "db/drafts/phase315p_operations_REVIEW_ONLY.sql"
+  ],
+  "hostedActivation": "BLOCKED: baseline catalog reconciliation, provider contract, independent review and owner change approval required"
+}

@@ -65,7 +65,7 @@ export function createDisposableHttpsCookieGateway({
 // Transport shared with the real restricted SQL adapter. Legacy hosted
 // factories stay disabled; this function does not create a listener.
 export function createPrivateHttpsCookieHandler({bridge,authority,appOrigin,csrfSigningKey,
- emailLogin=false,secureIngress=req=>req.socket?.encrypted===true}={}){
+ emailLogin=false,operations=null,secureIngress=req=>req.socket?.encrypted===true}={}){
  if(!bridge||typeof bridge.begin!=='function'||typeof bridge.completeAndIssue!=='function'||
     !authority||typeof authority.withAuthorizedRead!=='function'||typeof authority.revoke!=='function'||
     !Buffer.isBuffer(csrfSigningKey)||csrfSigningKey.length<32||typeof secureIngress!=='function')blocked();
@@ -194,6 +194,50 @@ export function createPrivateHttpsCookieHandler({bridge,authority,appOrigin,csrf
      reader=>reader.listRequests(limit===null?20:Number(limit)));
     return response(res,200,{items});
    }catch{return response(res,403,{error:'Session or workspace denied.'});}
+  }
+  if(pathname.startsWith('/v1/operations/')){
+   if(!sameSite)return response(res,403);
+   if(operations?.capabilities?.fixedPurpose!==true||typeof operations.run!=='function')
+    return response(res,503,{error:'Private operations unavailable.'});
+   const token=jar.get(SESSION);if(!TOKEN.test(token||''))return response(res,401);
+   const reads={'workspaces':'workspaces','authorize':'authorize','profile':'profile','requests':'list','history':'history'};
+   const writes={'onboard':'onboard','profile':'saveProfile','requests':'createRequest','members/revoke':'revokeMember'};
+   const part=pathname.slice('/v1/operations/'.length),detail=/^requests\/([A-Za-z0-9_-]{1,128})$/.exec(part),
+    transition=/^requests\/([A-Za-z0-9_-]{1,128})\/(assignment|review|decision|correction)$/.exec(part),
+    media=/^media\/([A-Za-z0-9_-]{1,128})\/delete$/.exec(part);
+   let action,input={};
+   if(req.method==='GET'){
+    action=reads[part]||(detail?'detail':null);if(detail)input.id=detail[1];
+   }else if(req.method==='POST'){
+    // Session-bound double submit plus exact Origin, before body/SQL work.
+    const csrf=jar.get(CSRF);
+    if(req.headers.origin!==origin||!equal(csrf,csrfFor(csrfSigningKey,token))||!equal(req.headers['x-csrf-token'],csrf))return response(res,403);
+    action=writes[part]||(transition?{assignment:'assign',review:'review',decision:'decision',correction:'correction'}[transition[2]]:media?'mediaDelete':null);
+    if(req.headers['content-type']!=='application/json'||req.headers['transfer-encoding']!==undefined||
+     !/^[1-9]\d{0,4}$/.test(req.headers['content-length']||'')||Number(req.headers['content-length'])>8192)return response(res,400);
+    try{
+     const chunks=[];let bytes=0;req.setTimeout?.(4000,()=>req.destroy());
+     for await(const chunk of req){const b=Buffer.from(chunk);bytes+=b.length;if(bytes>8192)throw Error();chunks.push(b);}
+     if(bytes!==Number(req.headers['content-length']))throw Error();
+     input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+     if(!input||Array.isArray(input)||typeof input!=='object')throw Error();
+     // Caller actor/role/token fields never become trusted context.
+     delete input.actor;delete input.role;delete input.token;delete input.workspaceId;
+     if(transition)input.id=transition[1];if(media)input.id=media[1];
+    }catch{return response(res,400);}
+   }
+   if(!action)return response(res,404);
+   const keys=action==='list'?['workspaceId','limit','cursor','status','kind','assignedTo']:
+    action==='history'?['workspaceId','limit','cursor']:['onboard','workspaces'].includes(action)?[]:['workspaceId'];
+   if(Array.from(searchParams.keys()).some(k=>!keys.includes(k)||searchParams.getAll(k).length!==1)||
+    !['onboard','workspaces'].includes(action)&&!WS.test(searchParams.get('workspaceId')||''))return response(res,400);
+   try{
+    const result=await operations.run({token,workspaceId:searchParams.get('workspaceId'),action,input,query:Object.fromEntries(searchParams)});
+    return response(res,200,result);
+   }catch(e){
+    const status=[400,403,404,409].includes(e?.status)?e.status:503;
+    return response(res,status,{error:status===409?'Version or idempotency conflict; refresh before saving.':status===503?'Private operation unavailable.':'Operation denied.'});
+   }
   }
   return response(res,404);
  };

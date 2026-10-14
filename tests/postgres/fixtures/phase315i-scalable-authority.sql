@@ -85,9 +85,12 @@ CREATE FUNCTION gs315i.read_requests(p_token text,p_workspace text)
    RAISE EXCEPTION 'session denied' USING ERRCODE='28000';
   END IF;
   session_id := split_part(p_token,'.',2)::uuid;
-  hash_hex := encode(sha256(convert_to(
-    'codeedge-growth-starter:session:v1'||chr(0)||session_id::text||chr(0)||
-    split_part(p_token,'.',3),'UTF8')),'hex');
+  hash_hex := encode(sha256(
+    convert_to('codeedge-growth-starter:session:v1','UTF8') ||
+    decode('00','hex') ||
+    convert_to(session_id::text,'UTF8') ||
+    decode('00','hex') ||
+    convert_to(split_part(p_token,'.',3),'UTF8')),'hex');
   PERFORM pg_advisory_xact_lock_shared(
     hashtextextended('gs315i:session:'||session_id::text,0));
   SELECT s.user_id INTO actor_id
@@ -138,9 +141,12 @@ CREATE FUNCTION gs315i.revoke_session(p_token text)
    RAISE EXCEPTION 'session denied' USING ERRCODE='28000';
   END IF;
   session_id := split_part(p_token,'.',2)::uuid;
-  hash_hex := encode(sha256(convert_to(
-    'codeedge-growth-starter:session:v1'||chr(0)||session_id::text||chr(0)||
-    split_part(p_token,'.',3),'UTF8')),'hex');
+  hash_hex := encode(sha256(
+    convert_to('codeedge-growth-starter:session:v1','UTF8') ||
+    decode('00','hex') ||
+    convert_to(session_id::text,'UTF8') ||
+    decode('00','hex') ||
+    convert_to(split_part(p_token,'.',3),'UTF8')),'hex');
   PERFORM pg_advisory_xact_lock(
     hashtextextended('gs315i:session:'||session_id::text,0));
   SELECT s.revoked_at INTO existing_revocation

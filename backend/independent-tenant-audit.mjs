@@ -30,8 +30,16 @@ export function assessIndependentTenantCatalog(snapshot){
   !Array.isArray(snapshot.tables)||!Array.isArray(snapshot.policies)||
   !Array.isArray(snapshot.legacyFunctions)||
   typeof snapshot.authenticatedSchemaUsage!=='boolean'||
+  typeof snapshot.anonSchemaUsage!=='boolean'||
+  typeof snapshot.serviceRoleSchemaUsage!=='boolean'||
   !Number.isSafeInteger(snapshot.authenticatedColumnSelectCount)||
   snapshot.authenticatedColumnSelectCount<0||
+  !Number.isSafeInteger(snapshot.anonColumnSelectCount)||
+  snapshot.anonColumnSelectCount<0||
+  !Number.isSafeInteger(snapshot.serviceRoleColumnSelectCount)||
+  snapshot.serviceRoleColumnSelectCount<0||
+  !Number.isSafeInteger(snapshot.publicExecuteFunctionCount)||
+  snapshot.publicExecuteFunctionCount<0||
   typeof snapshot.runtimeCanSetLegacyReader!=='boolean'||
   typeof snapshot.privateSchemaPresent!=='boolean'||
   typeof snapshot.dashboardExposureVerified!=='boolean'||
@@ -67,8 +75,15 @@ export function assessIndependentTenantCatalog(snapshot){
   if(f.anonExecute||f.authenticatedExecute)
    problems.push('browser_callable_function:'+f.name);
  }
- if(snapshot.authenticatedSchemaUsage&&snapshot.authenticatedColumnSelectCount>0)
+ if(snapshot.authenticatedColumnSelectCount>0)
   problems.push('authenticated_direct_column_read_grants');
+ if(snapshot.authenticatedSchemaUsage)problems.push('authenticated_schema_usage');
+ if(snapshot.anonSchemaUsage||snapshot.anonColumnSelectCount>0)
+  problems.push('anonymous_role_has_growth_access');
+ if(snapshot.serviceRoleSchemaUsage||snapshot.serviceRoleColumnSelectCount>0)
+  problems.push('service_role_has_growth_access');
+ if(snapshot.publicExecuteFunctionCount>0)
+  problems.push('public_function_execute_grants');
  if(snapshot.runtimeCanSetLegacyReader)problems.push('runtime_can_assume_legacy_reader');
  if(!snapshot.privateSchemaPresent)problems.push('private_session_schema_not_installed');
  if(!snapshot.dashboardExposureVerified)problems.push('dashboard_exposure_not_part_of_sql_proof');

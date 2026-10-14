@@ -1,0 +1,26 @@
+name: Growth Starter independent QA (isolated)
+on:
+  push:
+    branches:
+      - engineering/chatgpt-independent-qa-20261014
+permissions:
+  contents: read
+jobs:
+  independent-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check security QA test and offline SEO module syntax
+        run: |
+          node --check backend/seo-growth.mjs
+          node --check tests/chatgpt-csv-export-safety.test.mjs
+      - name: Run CSV injection regression and existing offline SEO tests
+        run: |
+          node --test tests/chatgpt-csv-export-safety.test.mjs tests/seo-growth.test.mjs tests/seo-search-data.test.mjs tests/premium-content-intelligence.test.mjs
+      - name: Run independent full Node source regression suite
+        run: |
+          node --test tests/*.test.mjs backend/pg-session-authority.test.mjs

@@ -45,6 +45,9 @@ export function createWorkspaceOperations({store,cursorKey,now=()=>Date.now(),ma
   });
  }
  return Object.freeze({capabilities:Object.freeze({transactionalAuthorization:true,persistentOperations:true}),
+  async authorize({workspaceId,actor}){
+   return store.transaction(tx=>authorizeTransactionalActor(tx,workspaceId,actor,'overview:read'));
+  },
   async saveProfile({workspaceId,actor,key,fields,expectedVersion}){
    const payload={fields:profileInput(fields),expectedVersion};
    return mutation({workspaceId,actor,key,action:'profile:write',operation:'profile.saved',payload},async tx=>{

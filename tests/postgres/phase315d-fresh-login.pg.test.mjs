@@ -30,7 +30,7 @@ const verifyUser=async({accessToken})=>{
  // MOCK ONLY. A real provider must verify the signature on the ORIGINAL
  // exchanged access token over HTTPS. Never promote this test mock to hosted.
  if(!accepted.has(accessToken))throw Error('Provider rejected bearer');
- return {id:accepted.get(accessToken),email_confirmed_at:new Date().toISOString(),
+ return {id:accepted.get(accessToken),email:'fictional@invalid.example',email_confirmed_at:new Date().toISOString(),
   is_anonymous:false};
 };
 const accepted=new Map();

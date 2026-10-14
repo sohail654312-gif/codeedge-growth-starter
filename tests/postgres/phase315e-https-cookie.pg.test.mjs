@@ -77,7 +77,7 @@ test('HTTPS cookie boundary: PKCE replay, host/CSRF/tenant denials, logout durab
   };
   const verifyUser=async({accessToken})=>{
    if(!accepted.has(accessToken))throw Error('Synthetic provider rejected token');
-   return {id:accepted.get(accessToken),email_confirmed_at:new Date().toISOString(),
+   return {id:accepted.get(accessToken),email:'fictional@invalid.example',email_confirmed_at:new Date().toISOString(),
     is_anonymous:false};
   };
   let handler;

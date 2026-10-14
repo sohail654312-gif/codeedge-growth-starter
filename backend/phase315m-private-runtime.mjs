@@ -78,13 +78,13 @@ export async function createPhase315mPrivateRuntime({issuerPool,gatewayPool,prov
  async function providerActive(userId,sessionId){
   // Bound the network wait while session locks are held. Never cache active
   // results; provider failure or mismatched identity must fail every read.
-  let timer;
+  let timer;const controller=new AbortController();
   try{
-   const result=await Promise.race([Promise.resolve().then(()=>checkProviderSession({userId,sessionId})),
+   const result=await Promise.race([Promise.resolve().then(()=>checkProviderSession({userId,sessionId,signal:controller.signal})),
     new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error()),3000);})]);
    if(result?.active!==true||result.userId!==userId||result.sessionId!==sessionId||
       result.expiresAt!==undefined&&(!Number.isSafeInteger(result.expiresAt)||result.expiresAt<=Math.floor(now()/1000)))denied();
-  }finally{clearTimeout(timer);}
+  }finally{clearTimeout(timer);controller.abort();}
  }
  const bridge=Object.freeze({
   async begin({email}={}){

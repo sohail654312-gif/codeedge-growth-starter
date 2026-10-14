@@ -8,7 +8,7 @@
  * The adapter NEVER treats a still-valid JWT as a fresh login code.
  */
 const PROVIDER_KEY=/^(?:sb_publishable_[A-Za-z0-9_-]{16,}|eyJ[A-Za-z0-9_.-]{24,})$/;
-const PKCE_CODE=/^[A-Za-z0-9_.~-]{16,512}$/;
+const PKCE_CODE=/^[A-Za-z0-9_-]{16,512}$/;
 const PKCE_VERIFIER=/^[A-Za-z0-9._~-]{43,128}$/;
 const TOKEN_PART=/^[A-Za-z0-9_-]+$/;
 const BAD='Supabase PKCE exchange denied.';

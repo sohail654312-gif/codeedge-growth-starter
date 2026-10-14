@@ -49,14 +49,15 @@ test('isolated PG17: RLS denies other tenants and FOR SHARE needs an UPDATE gran
    await c.query('GRANT UPDATE(state) ON '+TABLE+' TO '+ROLE);
    await c.query('SAVEPOINT with_update_grant');
    await c.query('SET LOCAL ROLE '+ROLE);
+   // IMPORTANT: PostgreSQL also applies the UPDATE RLS predicate to a
+   // locking SELECT. A column UPDATE grant alone is NOT enough.
    assert.deepEqual((await c.query('SELECT id FROM '+TABLE+' WHERE id=$1 FOR SHARE',[WA]))
+    .rows,[],'Fail closed: no UPDATE policy, therefore no lockable rows');
+   // The existing SELECT policy still permits ordinary reads.
+   assert.deepEqual((await c.query('SELECT id FROM '+TABLE+' WHERE id=$1',[WA]))
     .rows.map(x=>x.id),[WA]);
-   await c.query('SAVEPOINT write_attempt');
-   await assert.rejects(c.query("UPDATE "+TABLE+" SET state='suspended' WHERE id=$1",[WA]),
-    e=>e.code==='42501'||e.code==='44000',
-    'RLS still denies UPDATE because no update policy is granted');
-   await c.query('ROLLBACK TO SAVEPOINT write_attempt');
-   await c.query('RELEASE SAVEPOINT write_attempt');
+   const unchanged=await c.query("UPDATE "+TABLE+" SET state='suspended' WHERE id=$1",[WA]);
+   assert.equal(unchanged.rowCount,0,'RLS must silently filter unauthorized UPDATE');
    await c.query('ROLLBACK TO SAVEPOINT with_update_grant');
    await c.query('RELEASE SAVEPOINT with_update_grant');
   }finally{await c.query('ROLLBACK');}

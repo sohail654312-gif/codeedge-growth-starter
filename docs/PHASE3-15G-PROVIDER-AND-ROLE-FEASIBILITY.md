@@ -7,9 +7,9 @@
 - Tests: `tests/phase315g-supabase-pkce-adapter.test.mjs` uses an injected mock HTTP client. It is not a real provider exchange.
 
 ## Highest risk discovered: SQL row locking vs least privilege
-PostgreSQL documentation states that `SELECT ... FOR SHARE` also requires at least one column's **UPDATE** privilege on each locked table. The current Phase 3.15C session revocation uses `FOR SHARE` on sessions, workspaces and memberships; simply granting `SELECT` to a restricted hosted role **cannot run that code**.
+PostgreSQL documentation states that `SELECT ... FOR SHARE` also requires at least one column's **UPDATE** privilege on each locked table, and PostgreSQL RLS must also allow the row under the relevant UPDATE policy. The current Phase 3.15C session revocation uses `FOR SHARE` on sessions, workspaces and memberships; simply granting `SELECT` to a restricted hosted role **cannot run that code**.
 - `tests/postgres/phase315g-role-locks.pg.test.mjs` reproduces this in disposable PostgreSQL 17 with synthetic tenant roles.
-- The fixture shows a role restricted to owner A's workspace cannot read B, cannot lock with SELECT only, and can acquire FOR SHARE after a narrow UPDATE grant. However, that still expands the SQL privilege surface: it is NOT permission to grant UPDATE in hosted.
+- The fixture shows a role restricted to owner A's workspace cannot read B and cannot lock with SELECT only. Even with a narrow column UPDATE grant, the locking SELECT returns **zero rows** because there is no permissive UPDATE RLS policy. Granting a permissive UPDATE policy to recover the lock would also widen what that role could modify. Neither step is authorized for hosted use.
 - **Do not solve this using a general-purpose SECURITY DEFINER function, service_role, postgres or role-switch superuser.**
 - Next design must separate the gateway's session-management/writer transactions from tenant-scoped data readers, or otherwise prove a supported lock protocol and RLS design that does not empower unauthorized writes. A role per tenant must be evaluated for operational and resource costs; CI SET ROLE as a superuser is not proof that the production gateway can safely switch identities.
 

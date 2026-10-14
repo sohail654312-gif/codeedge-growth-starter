@@ -69,3 +69,14 @@ semantics are still blocked independently of the remaining engineering work.
 Official references reviewed: [PKCE](https://supabase.com/docs/guides/auth/sessions/pkce-flow),
 [sessions](https://supabase.com/docs/guides/auth/sessions), and
 [sign-out semantics](https://supabase.com/docs/guides/auth/signout).
+
+## Runtime reliability
+
+The private gateway adds a five-second PostgreSQL statement deadline, a 6.5-second
+client query deadline and a ten-second idle transaction deadline. See the documented
+[node-postgres configuration](https://node-postgres.com/apis/client). Successful and
+failed startup use bounded shutdown. Shutdown is idempotent, closes admission/idle
+connections, forces lingering HTTP connections after three seconds and bounds pool
+draining to five seconds. A pool that cannot drain produces a generic shutdown
+failure instead of hanging indefinitely. Real loopback HTTP tests exercise a request
+that never finishes; no production listener is opened by the tests.

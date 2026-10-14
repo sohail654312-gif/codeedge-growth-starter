@@ -14,7 +14,7 @@ export function createExactSessionAuthority({lookup,now=()=>Date.now(),timeoutMs
     const row=await Promise.race([Promise.resolve().then(()=>lookup({userId,sessionId,signal:controller.signal})),
      new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error()),timeoutMs);controller.signal.addEventListener('abort',()=>reject(Error()),{once:true});})]);
     const t=Math.floor(now()/1000);
-    if(!row||row.userId!==userId||row.sessionId!==sessionId||row.exists!==true||
+    if(!Number.isSafeInteger(t)||!row||row.userId!==userId||row.sessionId!==sessionId||row.exists!==true||
        row.revoked!==false||row.deleted!==false||row.banned!==false||
        !Number.isSafeInteger(row.expiresAt)||row.expiresAt<=t||
        row.policyValid!==true)return denied();

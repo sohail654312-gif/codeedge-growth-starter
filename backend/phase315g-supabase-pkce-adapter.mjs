@@ -71,10 +71,12 @@ export function createSupabasePkceHttpAdapter({
    throw Error('Trusted Supabase PKCE adapter configuration required.');
  const apikey=publishableKey;
  async function request(url,options){
-  try{return await fetchImpl(url,{
+  let timer;
+  try{return await Promise.race([Promise.resolve().then(()=>fetchImpl(url,{
    ...options,redirect:'error',cache:'no-store',credentials:'omit',
    signal:AbortSignal.timeout(timeoutMs)
-  });}catch{outage();}
+  })),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(OUTAGE)),timeoutMs);})]);}
+  catch{outage();}finally{clearTimeout(timer);}
  }
  return Object.freeze({
   status:'provider_http_adapter_unwired_to_hosted_entrypoints',
@@ -91,7 +93,10 @@ export function createSupabasePkceHttpAdapter({
    });
    // Provider errors are not an account-existence oracle for the browser.
    // Expected account/provider denial must not disclose account existence.
-   if([400,403,404,422].includes(response?.status))return Object.freeze({requested:true});
+   if([400,403,404,422].includes(response?.status)){
+    void response.body?.cancel?.().catch(()=>{});
+    return Object.freeze({requested:true});
+   }
    await jsonResponse(response,timeoutMs);
    return Object.freeze({requested:true});
   },

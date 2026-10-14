@@ -9,6 +9,8 @@ test('provider response body size and body-read timeout are bounded before JSON 
  const oversized=new Response(new ReadableStream({start(c){c.enqueue(new Uint8Array(32769));}}));
  await assert.rejects(createSupabasePkceHttpAdapter({...config,fetchImpl:async()=>oversized}).verifyUser({accessToken:token}),/unavailable/);
  await assert.rejects(createSupabasePkceHttpAdapter({...config,fetchImpl:async()=>({status:200,text:()=>new Promise(()=>{})})}).verifyUser({accessToken:token}),/unavailable/);
+ await assert.rejects(createSupabasePkceHttpAdapter({...config,fetchImpl:()=>new Promise(()=>{})}).verifyUser({accessToken:token}),/unavailable/);
+ await assert.rejects(createSupabasePkceHttpAdapter({...config,fetchImpl:async()=>({status:200,text:async()=>{throw Error('secret-token');}})}).verifyUser({accessToken:token}),e=>e.message==='Supabase Auth service unavailable.');
 });
 test('email initiation keeps eligible and denied-account responses indistinguishable',async()=>{
  const input={email:'fictional@invalid.example',codeChallenge:'X'.repeat(43),state:'Y'.repeat(43)};
@@ -22,6 +24,7 @@ test('authority requires exact identity, explicit account/session policy and bou
  const userId=randomUUID(),sessionId=randomUUID(),row={userId,sessionId,exists:true,revoked:false,deleted:false,banned:false,policyValid:true,expiresAt:Math.floor(Date.now()/1000)+60};
  const check=async value=>createExactSessionAuthority({lookup:async()=>value}).checkProviderSession({userId,sessionId});
  assert.equal((await check(row)).active,true);
+ assert.equal((await createExactSessionAuthority({lookup:async()=>row,now:()=>NaN}).checkProviderSession({userId,sessionId})).active,false);
  for(const patch of [{exists:false},{revoked:true},{deleted:true},{banned:true},{policyValid:false},{userId:randomUUID()},{sessionId:randomUUID()},{expiresAt:0},{expiresAt:undefined}])
   assert.equal((await check({...row,...patch})).active,false);
  let aborted=false;

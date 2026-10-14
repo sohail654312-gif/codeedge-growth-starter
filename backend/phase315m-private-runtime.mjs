@@ -82,8 +82,9 @@ export async function createPhase315mPrivateRuntime({issuerPool,gatewayPool,prov
   try{
    const result=await Promise.race([Promise.resolve().then(()=>checkProviderSession({userId,sessionId,signal:controller.signal})),
     new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error()),3000);})]);
-   if(result?.active!==true||result.userId!==userId||result.sessionId!==sessionId||
-      result.expiresAt!==undefined&&(!Number.isSafeInteger(result.expiresAt)||result.expiresAt<=Math.floor(now()/1000)))denied();
+   const t=Math.floor(now()/1000);
+   if(!Number.isSafeInteger(t)||result?.active!==true||result.userId!==userId||result.sessionId!==sessionId||
+      !Number.isSafeInteger(result.expiresAt)||result.expiresAt<=t)denied();
   }finally{clearTimeout(timer);controller.abort();}
  }
  const bridge=Object.freeze({

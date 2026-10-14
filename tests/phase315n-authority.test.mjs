@@ -39,14 +39,14 @@ function restrictedPool(role){
  };
 }
 
-async function makeRuntime(checkProviderSession){
+async function makeRuntime(checkProviderSession,now){
  const issuerPool=restrictedPool('gs315m_issuer');
  const gatewayPool=restrictedPool('gs315k_gateway');
  const provider={sendLoginEmail:async()=>{},exchangeAuthCode:async()=>{},
   verifyUser:async()=>{}};
  const runtime=await createPhase315mPrivateRuntime({issuerPool,gatewayPool,
   provider,projectUrl:PROJECT,appOrigin:APP,csrfSigningKey:randomBytes(32),
-  checkProviderSession});
+  checkProviderSession,...(now?{now}:{})});
  return {runtime,gatewayPool};
 }
 
@@ -57,6 +57,8 @@ test('private gateway fails closed before protected reads for invalid exact-sess
   {name:'provider returned another session',proof:{active:true,userId:OWNER,sessionId:randomUUID()}},
   {name:'provider returned another user',proof:{active:true,userId:randomUUID(),sessionId:SESSION}},
   {name:'provider session expired',proof:{active:true,userId:OWNER,sessionId:SESSION,expiresAt:seconds-1}},
+  {name:'provider expiry missing',proof:{active:true,userId:OWNER,sessionId:SESSION}},
+  {name:'provider expiry wrong type',proof:{active:true,userId:OWNER,sessionId:SESSION,expiresAt:String(seconds+60)}},
   {name:'provider returned no assertion',proof:null},
   {name:'provider returned only a boolean',proof:true}
  ];
@@ -70,6 +72,13 @@ test('private gateway fails closed before protected reads for invalid exact-sess
   assert.equal(callbacks,0,name+': application callback must not run');
   assert.equal(gatewayPool.calls.some(sql=>sql.includes('growth_starter_private.read_requests')),false,
    name+': no tenant data may be read');
+ }
+});
+test('private gateway rejects invalid clocks before invoking a protected data callback',async()=>{
+ for(const now of [()=>NaN,()=>Infinity,()=>Number.MAX_VALUE]){
+  const {runtime,gatewayPool}=await makeRuntime(async()=>({active:true,userId:OWNER,sessionId:SESSION,expiresAt:Math.floor(Date.now()/1000)+60}),now);
+  await assert.rejects(runtime.authority.withAuthorizedRead({token:token(),workspaceId:WORKSPACE},r=>r.listRequests()),/Private session denied\./);
+  assert.equal(gatewayPool.calls.some(sql=>sql.includes('growth_starter_private.read_requests')),false);
  }
 });
 

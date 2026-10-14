@@ -12,6 +12,7 @@ independent reviewer acceptance remains mandatory before hosted changes/release.
 |---|---|---|
 | HIGH | Operational store required disposable administrator table access | Separate fixed-function writer, NOLOGIN/NOBYPASSRLS owner, forced RLS, exact EXECUTE and privilege-drift preflight; real network-role PG tests |
 | HIGH | New private operations could otherwise be exposed without cookie/CSRF/session composition | All HTTP operations use session cookie; mutation Origin/CSRF/body checks before SQL; actor/role/token body claims discarded; synthetic transport plus composed callback->PG->logout test |
+| HIGH | Older private read authority accepted missing expiry / an invalid server clock | Require safe current time and future integer provider expiry in M as in P; missing/wrong-type/invalid-clock regressions deny before data callbacks |
 | HIGH | Tailwind 3 tooling pulled unpatched braces recursion DoS | Removed unused compiler; MIT static reset preserved, pinned root lockfile; root audit currently zero findings |
 | HIGH | Test image decoder used vulnerable bundled native libraries | Updated sharp to 0.35.5; real malformed/oversized image PG tests and high-severity audit included in CI |
 | MEDIUM | Separate migration drafts could be applied against drifted baseline/partial state | Ordered atomic review bundle, exact observed column/constraint baseline, pre/postflight; altered baseline rejects and mutation/audit failure rolls back |

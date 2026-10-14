@@ -83,6 +83,10 @@ and fixed function bodies. Forced RLS is retained; its owner-only policies permi
 the reviewed functions, whose predicates enforce tenancy. Neither caller GUCs nor
 browser JWT role metadata authorize an operation. PostgreSQL PUBLIC TEMP capability
 is not represented as absent; `pg_temp` is last and application objects are qualified.
+Standard PUBLIC Auth helper EXECUTEs are not treated as usable RPCs when Auth
+schema USAGE is absent. The writer explicitly rejects Auth USAGE, arbitrary
+non-temporary schema CREATE, and owner privilege drift; it does not require changes
+to managed helper ACLs. This compatibility case is rehearsed with a disposable helper.
 
 Existing privileged administrators/legacy writers remain outside this replacement's
 least-privilege boundary. They must be retired or constrained in the approved cutover.
@@ -114,7 +118,7 @@ test schema/data in that disposable database; do not rerun the full suite agains
 its populated previous state. CI provisions a fresh `postgres:17-alpine` service.
 The P suite creates/drops its own generated database and uses actual network roles.
 
-Local verification includes 236 core tests, the expanded disposable PG suite,
+Local verification includes the core tests, the expanded disposable PG suite,
 12 Chromium mobile/desktop tests, both typechecks, private build and zero current
 dependency audit findings. Exact final SHA, CI URLs and final counts are recorded
 in the generated release evidence and delivery report after remote checks complete.

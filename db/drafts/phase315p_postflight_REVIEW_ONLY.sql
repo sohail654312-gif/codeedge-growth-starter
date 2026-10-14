@@ -9,6 +9,9 @@ DO $$ DECLARE r record; f record; BEGIN
  IF (SELECT count(*) FROM pg_roles WHERE rolname IN('gs315p_writer','gs315p_ops_owner'))<>2 THEN RAISE EXCEPTION 'missing Phase P roles'; END IF;
  IF has_schema_privilege('gs315p_writer','growth_starter','USAGE') OR has_schema_privilege('gs315p_writer','growth_starter_private','CREATE') THEN
  RAISE EXCEPTION 'writer schema boundary failed'; END IF;
+ IF EXISTS(SELECT FROM pg_namespace n WHERE n.nspname NOT LIKE 'pg_temp%' AND n.nspname NOT LIKE 'pg_toast_temp%'
+ AND (has_schema_privilege('gs315p_writer',n.oid,'CREATE') OR has_schema_privilege('gs315p_ops_owner',n.oid,'CREATE'))) THEN
+ RAISE EXCEPTION 'unapproved schema creation capability'; END IF;
  IF EXISTS(SELECT FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
  WHERE n.nspname IN('growth_starter','growth_starter_private','auth') AND c.relkind IN('r','p','v','m','f')
  AND (has_any_column_privilege('gs315p_writer',c.oid,'SELECT,INSERT,UPDATE,REFERENCES') OR has_table_privilege('gs315p_writer',c.oid,'DELETE,TRUNCATE,TRIGGER'))) THEN

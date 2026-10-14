@@ -16,8 +16,11 @@ export const WRITER_PREFLIGHT=`SELECT current_user AS actor,session_user AS logi
  r.rolcanlogin,r.rolinherit,r.rolsuper,r.rolbypassrls,r.rolcreaterole,r.rolcreatedb,r.rolreplication,
  EXISTS(SELECT FROM pg_auth_members m WHERE m.member=r.oid) AS memberships,
  has_schema_privilege(current_user,'growth_starter','USAGE') AS business_schema,
+ coalesce((SELECT has_schema_privilege(current_user,n.oid,'USAGE') FROM pg_namespace n WHERE n.nspname='auth'),false) AS auth_schema,
  has_schema_privilege(current_user,'growth_starter_private','CREATE') AS schema_create,
  has_database_privilege(current_user,current_database(),'CREATE') AS db_create,
+ (SELECT count(*)::int FROM pg_namespace n WHERE n.nspname NOT LIKE 'pg_temp%' AND n.nspname NOT LIKE 'pg_toast_temp%'
+ AND has_schema_privilege(current_user,n.oid,'CREATE')) AS writable_schemas,
  (SELECT coalesce(jsonb_agg(n.nspname||'.'||c.relname),'[]') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
  WHERE n.nspname NOT IN('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg_toast%'
  AND c.relkind IN('r','p','v','m','f') AND
@@ -25,7 +28,8 @@ export const WRITER_PREFLIGHT=`SELECT current_user AS actor,session_user AS logi
  OR has_table_privilege(current_user,c.oid,'DELETE,TRUNCATE,TRIGGER'))) AS tables,
  (SELECT coalesce(jsonb_agg(p.proname||'('||oidvectortypes(p.proargtypes)||')' ORDER BY p.proname||'('||oidvectortypes(p.proargtypes)||')'),'[]')
  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
- WHERE n.nspname IN('growth_starter','growth_starter_private','auth') AND has_function_privilege(current_user,p.oid,'EXECUTE')) AS functions,
+ WHERE (n.nspname IN('growth_starter','growth_starter_private') OR
+ (n.nspname='auth' AND has_schema_privilege(current_user,n.oid,'USAGE'))) AND has_function_privilege(current_user,p.oid,'EXECUTE')) AS functions,
  (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
  WHERE n.nspname='growth_starter_private' AND EXISTS(SELECT FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
  WHERE a.grantee=0 AND a.privilege_type='EXECUTE')) AS public_functions,
@@ -50,17 +54,18 @@ export const WRITER_PREFLIGHT=`SELECT current_user AS actor,session_user AS logi
  WHERE n.nspname IN('growth_starter','growth_starter_private') AND (c.relowner=(SELECT oid FROM pg_roles WHERE rolname='gs315p_ops_owner')
  OR has_table_privilege('gs315p_ops_owner',c.oid,'DELETE,TRUNCATE,TRIGGER'))) AS owner_destructive,
  has_schema_privilege('gs315p_ops_owner','growth_starter','CREATE') OR has_schema_privilege('gs315p_ops_owner','growth_starter_private','CREATE')
- OR has_database_privilege('gs315p_ops_owner',current_database(),'CREATE') AS owner_create,
+ OR has_database_privilege('gs315p_ops_owner',current_database(),'CREATE') OR EXISTS(SELECT FROM pg_namespace n
+ WHERE n.nspname NOT LIKE 'pg_temp%' AND n.nspname NOT LIKE 'pg_toast_temp%' AND has_schema_privilege('gs315p_ops_owner',n.oid,'CREATE')) AS owner_create,
  (SELECT count(*)::int FROM pg_roles b WHERE b.rolname IN('anon','authenticated','service_role') AND
  (has_schema_privilege(b.oid,'growth_starter_private','USAGE') OR EXISTS(SELECT FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
  WHERE n.nspname='growth_starter_private' AND has_function_privilege(b.oid,p.oid,'EXECUTE')))) AS browser_private
  FROM pg_roles r WHERE r.rolname=current_user`;
 export function verifyWriterCatalog(r){
  if(!r||r.actor!=='gs315p_writer'||r.login!==r.actor||r.rolcanlogin!==true||
- ['rolinherit','rolsuper','rolbypassrls','rolcreaterole','rolcreatedb','rolreplication','memberships','business_schema','schema_create','db_create'].some(k=>r[k]!==false)||
+ ['rolinherit','rolsuper','rolbypassrls','rolcreaterole','rolcreatedb','rolreplication','memberships','business_schema','auth_schema','schema_create','db_create'].some(k=>r[k]!==false)||
  !Array.isArray(r.tables)||r.tables.length||!Array.isArray(r.functions)||JSON.stringify(r.functions.map(s=>s.replace(/,\s+/g,',')).sort())!==JSON.stringify(OPERATION_SIGNATURES)||
  r.public_functions!==0||r.unsafe_operations!==0||r.safe_owner!==1||r.rls!==9||r.other_definers!==0||r.browser_private!==0||
- r.owner_extra_tables!==0||r.owner_destructive!==0||r.owner_create!==false)
+ r.owner_extra_tables!==0||r.owner_destructive!==0||r.owner_create!==false||r.writable_schemas!==0)
  throw new DomainError('Restricted writer catalog denied.',503);
  return Object.freeze({role:r.actor,verified:true});
 }

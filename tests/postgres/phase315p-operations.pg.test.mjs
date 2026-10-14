@@ -68,6 +68,17 @@ test('P writer exact effective catalog, browser denies and missing/drifted privi
  assert.throws(()=>verifyWriterCatalog((catalog.owner_extra_tables=1,catalog)),/catalog denied/);
  await assert.rejects(createPrivateWorkspaceOperations({pool,checkProviderSession:providerFacts,cursorKey:'x'.repeat(40)}),/catalog denied/);
  await setup.query('REVOKE SELECT ON growth_starter.invitations FROM gs315p_ops_owner');
+ await setup.query('GRANT CREATE ON SCHEMA public TO gs315p_writer');
+ await assert.rejects(createPrivateWorkspaceOperations({pool,checkProviderSession:providerFacts,cursorKey:'x'.repeat(40)}),/catalog denied/);
+ await setup.query('REVOKE CREATE ON SCHEMA public FROM gs315p_writer');
+ // Standard PUBLIC Auth helpers need no managed ACL change: without Auth
+ // USAGE they are unreachable, not usable writer RPCs.
+ await setup.query("CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS 'SELECT NULL::uuid'");
+ await createPrivateWorkspaceOperations({pool,checkProviderSession:providerFacts,cursorKey:'x'.repeat(40)});
+ await assert.rejects(pool.query('SELECT auth.uid()'),e=>e.code==='42501');
+ await setup.query('GRANT USAGE ON SCHEMA auth TO gs315p_writer');
+ await assert.rejects(createPrivateWorkspaceOperations({pool,checkProviderSession:providerFacts,cursorKey:'x'.repeat(40)}),/catalog denied/);
+ await setup.query('REVOKE USAGE ON SCHEMA auth FROM gs315p_writer');await setup.query('DROP SCHEMA auth CASCADE');
 });
 test('P real session-derived A/B/C authorization, owner onboarding, profile and forged claims',async()=>{
  assert.equal((await call(A,'authorize')).role,'owner');assert.equal((await call(C,'authorize')).role,'staff');

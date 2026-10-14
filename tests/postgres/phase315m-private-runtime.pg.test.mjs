@@ -75,7 +75,7 @@ test('Phase 3.15M exact restricted issuer, PKCE adapter, tenant denial, races an
    }});
   const config={issuerPool:issuer,gatewayPool:gateway,provider,projectUrl:PROJECT+'/',appOrigin:APP,
    csrfSigningKey:randomBytes(32),checkProviderSession:async({userId,sessionId})=>{
-    if(providerDown)throw Error('outage');return {active:providerActive,userId,sessionId};
+    if(providerDown)throw Error('outage');return {active:providerActive,userId,sessionId,expiresAt:Math.floor(Date.now()/1000)+3600};
    }};
   await assert.rejects(createPhase315mPrivateRuntime({...config,checkProviderSession:undefined}),/unavailable/);
   await assert.rejects(createPhase315mPrivateRuntime({...config,issuerPool:admin}),/unavailable/);

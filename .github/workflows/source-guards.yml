@@ -21,7 +21,7 @@ jobs:
           node --check backend/routes.mjs
           node --check backend/transactional.mjs
       - name: Independent domain, route, and regression tests (stubbed SDK)
-        run: node --test tests/*.test.mjs
+        run: node --test tests/*.test.mjs backend/pg-session-authority.test.mjs
       - name: Check for conflict markers and accidental secret examples
         shell: bash
         run: |

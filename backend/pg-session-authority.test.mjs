@@ -13,6 +13,8 @@ function fixture({revoke=false,missing=false,security={},policy={},queryError=fa
   can_set_legacy_reader:false,auth_schema:true,session_id:true,session_user:true,
   session_until:true,user_id:true,banned_until:true,deleted_at:true,
   session_insert:false,session_update:false,session_delete:false,user_update:false,
+  session_full_select:false,user_full_select:false,
+  extra_session_columns:[],extra_user_columns:[],
   growth_schema:false,db_create:false,...security};
  const policies={expected_policies:3,rls_tables:7,auth_schema_usage:true,ws_select:true,
   member_select:true,request_select:true,legacy_list:false,legacy_requests:false,
@@ -38,9 +40,14 @@ test('fail-closed PostgreSQL principal and effective RLS/grants are checked befo
  assert.equal((await a.checkAuthoritativeSession({userId:A,sessionId:SID})).active,true);
  assert.ok(f.calls.some(x=>x.sql.includes('FROM auth.sessions') && x.args[0]===SID && x.args[1]===A));
  for(const bad of [{security:{rolsuper:true}},{security:{rolinherit:true}},
-   {security:{actor:'postgres'}},{security:{session_id:false}},
+   {security:{actor:'postgres'}},{security:{rolcanlogin:false}},
+   {security:{auth_schema:false}},{security:{session_id:false}},
+   {security:{session_full_select:true}},{security:{user_full_select:true}},
+   {security:{extra_session_columns:['ip']}},{security:{extra_user_columns:['email']}},
    {security:{growth_schema:true}},{security:{can_set_authenticated:true}},
+   {security:{can_set_legacy_reader:true}},
    {policy:{expected_policies:0}},{policy:{legacy_list:true}},
+   {policy:{legacy_requests:true}},{policy:{runtime_list:true}},
    {policy:{auth_schema_usage:false}},{policy:{member_select:false}}]){
   await assert.rejects(createPgSessionAuthority({pool:fixture(bad).pool}),/unavailable/);
  }

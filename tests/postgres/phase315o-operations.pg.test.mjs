@@ -2,11 +2,16 @@ import test,{before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import pg from 'pg';
 import {createPostgresStore} from '../../backend/postgres-store.mjs';
 import {createWorkspaceOperations} from '../../backend/workspace-operations.mjs';
 import {createTransactionalWorkspaceService,createTransactionalWorkflowService} from '../../backend/transactional.mjs';
 import {ownerWorkspaceId} from '../../backend/core.mjs';
+import {createSandboxAutomationEngine} from '../../backend/sandbox-automation.mjs';
+import {createPersistentSandboxStore} from '../../backend/persistent-sandbox-store.mjs';
 
 // This suite owns ONLY a generated database on a local disposable PG service.
 const url=new URL(process.env.TEST_DATABASE_URL||'http://missing.invalid');
@@ -119,4 +124,21 @@ test('database constraints reject owner mismatch and foreign media outbox refere
  await pool.query('GRANT USAGE ON SCHEMA growth_starter TO gs_o_denied');
  await pool.query('GRANT SELECT ON growth_starter.business_profiles,growth_starter.request_notes,growth_starter.operation_receipts TO gs_o_denied');
  const connection=await pool.connect();try{await connection.query('SET ROLE gs_o_denied');assert.equal((await connection.query('SELECT * FROM growth_starter.business_profiles')).rowCount,0);}finally{await connection.query('RESET ROLE');connection.release();}
+});
+test('sandbox uses real transactional PG authorization: owner approves, agency simulates, revocation blocks replay',async()=>{
+ const agency={userId:'ops_agency_E_555',email:'agency-e@fiction.invalid',emailVerified:true};
+ const invite=await members.issue({actor:owner,workspaceId:ws,email:agency.email,role:'agency_admin'});await members.accept({actor:agency,token:invite.token});
+ const directory=await mkdtemp(join(tmpdir(),'gs-pg-sandbox-'));
+ try{
+  const sandbox=await createPersistentSandboxStore({directory}),engine=createSandboxAutomationEngine({store:sandbox,authorizer:service});
+  const definition={id:'pg_bound_simulation',trigger:'manual',conditions:[],actions:[{type:'notifications.send',label:'Fictional sandbox notification'}],requiresApproval:true};
+  const input={workspaceId:ws,actor:owner.userId,key:'pg_sandbox_key_123456',definition,event:{workspaceId:ws,type:'manual'}};
+  await engine.approve(input);
+  await assert.rejects(engine.run({...input,actor:other.userId}),e=>e.status===403);
+  await assert.rejects(engine.run({...input,actor:staff.userId}),e=>e.status===403);
+  assert.equal((await engine.run({...input,actor:agency.userId})).status,'completed');
+  await members.revoke({actor:owner,workspaceId:ws,userId:agency.userId});
+  await assert.rejects(engine.run({...input,actor:agency.userId}),e=>e.status===403);
+  await assert.rejects(engine.history({...input,actor:agency.userId}),e=>e.status===403);
+ }finally{await rm(directory,{recursive:true,force:true});}
 });

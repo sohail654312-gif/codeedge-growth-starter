@@ -37,11 +37,11 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   const bridgeSql=readFileSync('db/drafts/phase315s_exact_auth_bridge_REVIEW_ONLY.sql','utf8');
   // A misconfigured LOGIN checker or API-role membership must deny installation.
   await db.query('ALTER ROLE growth_starter_session_checker LOGIN');
-  await assert.rejects(db.query(bridgeSql),/Phase 3\\.15S baseline denied/);
+  await assert.rejects(db.query(bridgeSql),/Phase 3[.]15S baseline denied/);
   await db.query('ROLLBACK');
   await db.query('ALTER ROLE growth_starter_session_checker NOLOGIN');
   await db.query('GRANT growth_starter_session_checker TO authenticator');
-  await assert.rejects(db.query(bridgeSql),/Phase 3\\.15S baseline denied/);
+  await assert.rejects(db.query(bridgeSql),/Phase 3[.]15S baseline denied/);
   await db.query('ROLLBACK');
   await db.query('REVOKE growth_starter_session_checker FROM authenticator');
   await db.query(bridgeSql);

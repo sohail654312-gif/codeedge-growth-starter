@@ -94,6 +94,18 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   await db.query('GRANT CREATE ON SCHEMA growth_starter_auth_bridge TO growth_starter_session_checker');
   await expectCatalogFailure('schema_no_external_create');
   await db.query('REVOKE CREATE ON SCHEMA growth_starter_auth_bridge FROM growth_starter_session_checker');
+  // A new routine receives default PUBLIC EXECUTE. The checker already has
+  // private-schema USAGE, so an unreviewed definer could expose synthetic Auth.
+  await db.query(`CREATE FUNCTION growth_starter_auth_bridge.unreviewed_probe()
+    RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path = ''
+    AS $probe$ SELECT count(*)::integer FROM auth.users $probe$`);
+  await db.query('SET ROLE growth_starter_session_checker');
+  try{
+   const probe=(await db.query('SELECT growth_starter_auth_bridge.unreviewed_probe() AS total')).rows[0];
+   assert.equal(probe.total,2,'unreviewed definer is callable via default PUBLIC EXECUTE');
+  }finally{await db.query('RESET ROLE');}
+  await expectCatalogFailure('schema_only_expected_routine');
+  await db.query('DROP FUNCTION growth_starter_auth_bridge.unreviewed_probe()');
   await db.query('GRANT EXECUTE ON FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) TO gs315s_untrusted');
   await expectCatalogFailure('function_acl_restricted');
   await db.query('REVOKE EXECUTE ON FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) FROM gs315s_untrusted');

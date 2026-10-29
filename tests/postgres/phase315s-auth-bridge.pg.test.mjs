@@ -24,6 +24,9 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   await db.query('CREATE ROLE growth_starter_session_checker NOLOGIN NOINHERIT');
   await db.query('CREATE ROLE gs315s_untrusted NOLOGIN NOINHERIT');
   roles=true;
+  for(const role of ['anon','authenticated','service_role','authenticator']){
+   await db.query(`CREATE ROLE ${role} NOLOGIN NOINHERIT`);
+  }
   await db.query('CREATE SCHEMA auth');
   await db.query('REVOKE ALL ON SCHEMA auth FROM PUBLIC');
   await db.query('CREATE TABLE auth.users(id uuid PRIMARY KEY,banned_until timestamptz,deleted_at timestamptz)');
@@ -31,13 +34,31 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   await db.query('REVOKE ALL ON ALL TABLES IN SCHEMA auth FROM PUBLIC');
   await db.query('INSERT INTO auth.users(id) VALUES($1),($2)',[owner,other]);
   await db.query("INSERT INTO auth.sessions(id,user_id,not_after) VALUES($1,$2,now()+interval '1 hour')",[sid,owner]);
-  await db.query(readFileSync('db/drafts/phase315s_exact_auth_bridge_REVIEW_ONLY.sql','utf8'));
+  const bridgeSql=readFileSync('db/drafts/phase315s_exact_auth_bridge_REVIEW_ONLY.sql','utf8');
+  // A misconfigured LOGIN checker or API-role membership must deny installation.
+  await db.query('ALTER ROLE growth_starter_session_checker LOGIN');
+  await assert.rejects(db.query(bridgeSql),/Phase 3[.]15S baseline denied/);
+  await db.query('ROLLBACK');
+  await db.query('ALTER ROLE growth_starter_session_checker NOLOGIN');
+  await db.query('GRANT growth_starter_session_checker TO authenticator');
+  await assert.rejects(db.query(bridgeSql),/Phase 3[.]15S baseline denied/);
+  await db.query('ROLLBACK');
+  await db.query('REVOKE growth_starter_session_checker FROM authenticator');
+  await db.query(bridgeSql);
   const f=(await db.query("SELECT has_schema_privilege('growth_starter_session_checker','auth','USAGE') AS auth_usage, "+
    "has_table_privilege('growth_starter_session_checker','auth.sessions','SELECT') AS sessions_read, "+
    "has_table_privilege('growth_starter_session_checker','auth.users','SELECT') AS users_read, "+
    "has_function_privilege('growth_starter_session_checker','growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid)','EXECUTE') AS checker_exec, "+
    "has_function_privilege('gs315s_untrusted','growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid)','EXECUTE') AS other_exec")).rows[0];
   assert.deepEqual(f,{auth_usage:false,sessions_read:false,users_read:false,checker_exec:true,other_exec:false});
+  for(const role of ['anon','authenticated','service_role','authenticator']){
+   const priv=(await db.query("SELECT has_schema_privilege($1,'growth_starter_auth_bridge','USAGE') AS schema_usage, "+
+    "has_function_privilege($1,'growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid)','EXECUTE') AS function_exec",[role])).rows[0];
+   assert.deepEqual(priv,{schema_usage:false,function_exec:false},`${role} must not reach the private bridge`);
+  }
+  await db.query('SET ROLE authenticator');
+  try{await assert.rejects(db.query('SELECT * FROM growth_starter_auth_bridge.exact_pair_snapshot($1,$2)',[owner,sid]),denied);}
+  finally{await db.query('RESET ROLE');}
   async function snap(user=owner,session=sid){
    await db.query('SET ROLE growth_starter_session_checker');
    try{return (await db.query('SELECT * FROM growth_starter_auth_bridge.exact_pair_snapshot($1,$2)',[user,session])).rows[0];}
@@ -81,7 +102,7 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   if(roles){
    await db.query('DROP SCHEMA IF EXISTS growth_starter_auth_bridge CASCADE').catch(()=>{});
    await db.query('DROP SCHEMA IF EXISTS auth CASCADE').catch(()=>{});
-   for(const role of ['growth_starter_session_checker','gs315s_untrusted']){
+   for(const role of ['growth_starter_session_checker','gs315s_untrusted','anon','authenticated','service_role','authenticator']){
     await db.query('DROP OWNED BY '+role+' CASCADE').catch(()=>{});
     await db.query('DROP ROLE '+role).catch(()=>{});
    }

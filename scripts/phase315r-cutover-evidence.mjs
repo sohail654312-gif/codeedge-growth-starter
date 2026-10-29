@@ -27,6 +27,15 @@ function evaluateCutoverEvidence(snapshot) {
   check('writer_identity','HIGH',proper('gs315p_writer',true),
    'Approved writer must be LOGIN, non-superuser and non-BYPASSRLS.',
    'Approve and provision the separately reviewed restricted writer only after cutover prerequisites.');
+  // All three isolated private runtime pools are required. Previously a
+  // plausible writer-only snapshot could be labelled catalog-consistent even
+  // with no issuer or authenticated gateway installed.
+  check('issuer_identity','HIGH',proper('gs315m_issuer',true),
+   'Private session issuer must be a dedicated non-superuser, non-BYPASSRLS LOGIN.',
+   'Provision and preflight the reviewed private issuer during approved cutover.');
+  check('gateway_identity','HIGH',proper('gs315k_gateway',true),
+   'Private read/logout gateway must be a dedicated non-superuser, non-BYPASSRLS LOGIN.',
+   'Provision and preflight the reviewed private gateway during approved cutover.');
   check('writer_owner','HIGH',proper('gs315p_ops_owner',false),
    'Operational function owner must be NOLOGIN, non-superuser and non-BYPASSRLS.',
    'Apply reviewed private owner functions and verify its effective catalog permissions.');

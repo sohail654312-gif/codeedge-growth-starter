@@ -44,7 +44,54 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   await assert.rejects(db.query(bridgeSql),/Phase 3[.]15S baseline denied/);
   await db.query('ROLLBACK');
   await db.query('REVOKE growth_starter_session_checker FROM authenticator');
+  const catalogSql=readFileSync('db/reviews/phase315s_auth_bridge_catalog_READ_ONLY.sql','utf8');
+  async function inspectCatalog(){
+   const result=await db.query(catalogSql);
+   const selected=Array.isArray(result)?result.find(part=>part.command==='SELECT'):result;
+   assert.ok(selected?.rows?.[0]?.snapshot,'read-only catalog must return one snapshot');
+   return selected.rows[0].snapshot;
+  }
+  const absent=await inspectCatalog();
+  assert.equal(absent.checksPassed,false);
+  assert.ok(absent.failedChecks.includes('bridge_exists'));
   await db.query(bridgeSql);
+  const healthy=await inspectCatalog();
+  assert.equal(healthy.checksPassed,true,JSON.stringify(healthy.failedChecks));
+  assert.deepEqual(healthy.failedChecks,[]);
+  async function expectCatalogFailure(check){
+   const report=await inspectCatalog();
+   assert.equal(report.checksPassed,false,check);
+   assert.ok(report.failedChecks.includes(check),JSON.stringify(report.failedChecks));
+  }
+  // Detect effective grants and drift AFTER installation; do not mutate hosted state.
+  await db.query('GRANT USAGE ON SCHEMA growth_starter_auth_bridge TO anon');
+  await expectCatalogFailure('api_no_bridge_access');
+  await db.query('REVOKE USAGE ON SCHEMA growth_starter_auth_bridge FROM anon');
+  await db.query('GRANT EXECUTE ON FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) TO PUBLIC');
+  await expectCatalogFailure('public_no_function_execute');
+  await db.query('REVOKE EXECUTE ON FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) FROM PUBLIC');
+  await db.query('ALTER FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) SECURITY INVOKER');
+  await expectCatalogFailure('security_definer');
+  await db.query('ALTER FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) SECURITY DEFINER');
+  await db.query('ALTER FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) SET search_path TO public');
+  await expectCatalogFailure('empty_search_path');
+  await db.query("ALTER FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) SET search_path TO ''");
+  await db.query('GRANT growth_starter_session_checker TO authenticator');
+  await expectCatalogFailure('checker_not_api_reachable');
+  await db.query('REVOKE growth_starter_session_checker FROM authenticator');
+  await db.query('GRANT SELECT ON auth.sessions TO growth_starter_session_checker');
+  await expectCatalogFailure('checker_no_raw_auth');
+  await db.query('REVOKE SELECT ON auth.sessions FROM growth_starter_session_checker');
+  await db.query('GRANT SELECT (id) ON auth.sessions TO growth_starter_session_checker');
+  await expectCatalogFailure('checker_no_raw_auth');
+  await db.query('REVOKE SELECT (id) ON auth.sessions FROM growth_starter_session_checker');
+  await db.query('ALTER ROLE growth_starter_session_checker LOGIN');
+  await expectCatalogFailure('checker_restricted');
+  await db.query('ALTER ROLE growth_starter_session_checker NOLOGIN');
+  await db.query('ALTER FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) OWNER TO authenticator');
+  await expectCatalogFailure('owner_not_api_reachable');
+  await db.query('ALTER FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) OWNER TO gs_test');
+  assert.equal((await inspectCatalog()).checksPassed,true,'all synthetic drift must be reverted');
   const f=(await db.query("SELECT has_schema_privilege('growth_starter_session_checker','auth','USAGE') AS auth_usage, "+
    "has_table_privilege('growth_starter_session_checker','auth.sessions','SELECT') AS sessions_read, "+
    "has_table_privilege('growth_starter_session_checker','auth.users','SELECT') AS users_read, "+

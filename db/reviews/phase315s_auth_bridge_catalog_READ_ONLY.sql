@@ -81,6 +81,15 @@ WITH bridge AS (
       CROSS JOIN LATERAL aclexplode(COALESCE(b.nspacl,acldefault('n',b.nspowner))) acl
       WHERE acl.privilege_type='CREATE' AND acl.grantee<>b.nspowner)
       AS schema_no_external_create,
+  -- The checker has schema USAGE; an extra SECURITY DEFINER routine
+  -- can inherit PUBLIC EXECUTE and expose Auth data without changing the
+  -- reviewed exact-pair function's ACL. Only that exact routine is approved.
+  NOT EXISTS(SELECT 1 FROM pg_proc p
+      JOIN pg_namespace n ON n.oid=p.pronamespace
+      WHERE n.nspname='growth_starter_auth_bridge'
+        AND p.oid IS DISTINCT FROM
+            to_regprocedure('growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid)'))
+      AS schema_only_expected_routine,
   NOT EXISTS(SELECT 1 FROM bridge b CROSS JOIN checker c
       CROSS JOIN LATERAL aclexplode(COALESCE(b.proacl,acldefault('f',b.proowner))) acl
       WHERE acl.privilege_type='EXECUTE'
@@ -120,6 +129,7 @@ WITH bridge AS (
   ('api_no_bridge_access',f.api_no_bridge_access),
   ('schema_acl_restricted',f.schema_acl_restricted),
   ('schema_no_external_create',f.schema_no_external_create),
+  ('schema_only_expected_routine',f.schema_only_expected_routine),
   ('function_acl_restricted',f.function_acl_restricted),
   ('checker_no_grant_option',f.checker_no_grant_option),
   ('public_no_schema_usage',f.public_no_schema_usage),

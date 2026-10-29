@@ -12,9 +12,11 @@ replace the security and release gates in
    `codeedge-growth-starter-staging` (`dbppeymhsemvghbvuvof`) returned
    `INACTIVE` on 2026-10-29. The existing project was successfully sent a
    `restore_project` request (provider response: `success: true`).
-   Subsequent project reads returned `COMING_UP`. A first read-only SQL attempt
-   failed with `Database is possibly not accessible at the moment`.
-   This is **not** proof of a usable database or a completed restoration.
+   Initial project reads returned `COMING_UP` and SQL initially failed with
+   `Database is possibly not accessible at the moment`. **Later on 2026-10-29,
+   the project reported `ACTIVE_HEALTHY` and `SELECT 1 AS healthy` returned 1
+   on PostgreSQL 17.11. Database availability is now verified.** This does not
+   establish hosted application, authentication or tenant-isolation acceptance.
 
 2. **Provider Auth authority.** The exact original Supabase
    `(user_id, session_id)`/current-account-and-policy verification contract is
@@ -27,9 +29,13 @@ replace the security and release gates in
    email check showed automated replies, not a technical answer to
    `SU-502526`/`SU-503988`.
 
-3. **Hosted privilege/Data API gap.** The Oct 14 handoff showed older
-   authenticated column SELECT grants, three legacy postgres-owned
-   SECURITY DEFINER functions and a role-setting edge. The new private schema,
+3. **Hosted privilege/Data API gap.** An updated live read-only catalog check on Oct 29 found **7 RLS-enabled
+   Growth Starter tables, 3 policies, 15 authenticated SELECT-column grants,
+   3 legacy privileged functions, an old runtime-to-reader SET-role edge, and
+   no new `growth_starter_private` schema**. The dedicated session checker
+   still has no `USAGE` on `auth`. The Security Advisor shows 4 INFO
+   notices for intentionally default-denied tables without SELECT policies.
+   These findings match the historic risk, not a demonstrated data leak. The new private schema,
    actual login roles, signed REST/GraphQL denial probes and live hosted
    acceptance were NOT installed or verified. Do not claim a leak: this is an
    unresolved exposure/cutover review. October 30, 2026 is also Supabase's
@@ -42,9 +48,22 @@ replace the security and release gates in
    callbacks, real account acceptance, media/storage, invitation email,
    backup/restore, monitoring and production approval are not established.
 
+## Live evidence after restore
+
+- Project state: `ACTIVE_HEALTHY`; simple read-only SQL: `healthy=1`.
+- 7 Growth Starter RLS-enabled tables; 3 RLS policies; 4 INFO findings on
+  deliberately restricted tables (do not add public access to clear them).
+- Authenticated schema usage and 15 SELECT-column grants still present;
+  3 privileged legacy functions and reader-role switching still present.
+- The private replacement schema is absent. The dedicated checker lacks
+  `USAGE` on managed `auth`, despite scoped columns already granted.
+- Seven existing hosted migrations observed, with the same identifiers as
+  the October 14 handoff. No migrations executed in this recovery check.
+
 ## Safe recovery sequence (current Supabase first)
 
-**A. Prove actual availability without changing data.**
+**A. Prove actual availability without changing data.** (Project status and
+minimal SQL check completed; remaining checks and signed probes open.)
 
 - Require project state `ACTIVE_HEALTHY` (or independently documented
   equivalent). `COMING_UP`, `INACTIVE` and a successful restore request
@@ -124,8 +143,9 @@ replace the security and release gates in
 ## Do not confuse these verdicts
 
 - **Supabase restore requested:** confirmed, provider returned success.
-- **Supabase database healthy / read-only query succeeded:** not yet confirmed
-  at the time this review was written.
+- **Supabase database healthy / read-only query succeeded:** confirmed on
+  2026-10-29, PostgreSQL 17.11. Host availability is recovered; application
+  hosted acceptance is not.
 - **Growth Starter source:** previous exact-SHA passing test evidence; recheck
   before using current source.
 - **Hosted secure authentication and tenant acceptance:** blocked.

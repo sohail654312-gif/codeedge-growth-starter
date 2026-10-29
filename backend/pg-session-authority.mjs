@@ -76,29 +76,32 @@ function timestamp(x) {
  const t=x instanceof Date?x.getTime():Date.parse(x);
  return Number.isFinite(t)?Math.trunc(t/1000):NaN;
 }
+function assertSessionCheckerSecurity(security){
+ // A missing/null catalog flag is UNKNOWN, not a safe false value.
+ // PostgreSQL returns booleans for these expressions; require exact types.
+ const requiredTrue=['rolcanlogin','auth_schema','session_id','session_user',
+  'session_until','user_id','banned_until','deleted_at'];
+ const requiredFalse=['rolsuper','rolbypassrls','rolinherit','rolcreaterole',
+  'rolcreatedb','rolreplication','can_set_authenticated','can_set_service_role',
+  'can_set_postgres','can_set_legacy_reader','session_insert','session_update',
+  'session_delete','user_update','session_full_select','user_full_select',
+  'growth_schema','db_create'];
+ if(!security || security.actor!=='growth_starter_session_checker' ||
+    security.login!==security.actor ||
+    !requiredTrue.every(k=>security[k]===true) ||
+    !requiredFalse.every(k=>security[k]===false) ||
+    !Array.isArray(security.extra_session_columns) ||
+    security.extra_session_columns.length!==0 ||
+    !Array.isArray(security.extra_user_columns) ||
+    security.extra_user_columns.length!==0)blocked();
+}
 export async function createPgSessionAuthority({pool,now=()=>Date.now()}={}){
  if(!pool || typeof pool.connect!=='function' || typeof now!=='function')blocked();
  const c=await pool.connect().catch(()=>blocked());
  try {
   await c.query('BEGIN READ ONLY');
   const security=(await c.query(SECURITY_SQL)).rows?.[0];
-  // A missing/null catalog flag is UNKNOWN, not a safe false value.
-  // PostgreSQL returns booleans for these expressions; require exact types.
-  const requiredTrue=['rolcanlogin','auth_schema','session_id','session_user',
-   'session_until','user_id','banned_until','deleted_at'];
-  const requiredFalse=['rolsuper','rolbypassrls','rolinherit','rolcreaterole',
-   'rolcreatedb','rolreplication','can_set_authenticated','can_set_service_role',
-   'can_set_postgres','can_set_legacy_reader','session_insert','session_update',
-   'session_delete','user_update','session_full_select','user_full_select',
-   'growth_schema','db_create'];
-  if(!security || security.actor!=='growth_starter_session_checker' ||
-     security.login!==security.actor ||
-     !requiredTrue.every(k=>security[k]===true) ||
-     !requiredFalse.every(k=>security[k]===false) ||
-     !Array.isArray(security.extra_session_columns) ||
-     security.extra_session_columns.length!==0 ||
-     !Array.isArray(security.extra_user_columns) ||
-     security.extra_user_columns.length!==0)blocked();
+  assertSessionCheckerSecurity(security);
   const p=(await c.query(POLICY_SQL)).rows?.[0];
   if(!p || p.expected_policies!==3 ||
      !Number.isSafeInteger(p.rls_tables) || p.rls_tables<7 ||
@@ -120,6 +123,9 @@ export async function createPgSessionAuthority({pool,now=()=>Date.now()}={}){
    try {
     await conn.query('BEGIN READ ONLY');
     await conn.query("SET LOCAL statement_timeout = '2000ms'");
+    // Every acquired pool connection must prove its own effective principal and grants.
+    // Startup checks on a different pooled connection cannot authorize this one.
+    assertSessionCheckerSecurity((await conn.query(SECURITY_SQL)).rows?.[0]);
     const result=await conn.query(SESSION_SQL,[sessionId,userId]);
     await conn.query('COMMIT');
     const row=result.rows?.[0];

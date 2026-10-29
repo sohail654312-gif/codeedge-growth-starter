@@ -18,10 +18,11 @@ CREATE FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(p_user uuid,p_ses
  RETURNS TABLE(pair_exists boolean,banned boolean,deleted boolean,session_not_after timestamptz)
  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
 AS $function$
- SELECT s.id IS NOT NULL,
+ -- A session row without its matching user is not an authenticated pair.
+ SELECT (s.id IS NOT NULL AND u.id IS NOT NULL),
         (u.banned_until IS NOT NULL AND u.banned_until > CURRENT_TIMESTAMP),
         u.deleted_at IS NOT NULL,
-        s.not_after
+        CASE WHEN u.id IS NOT NULL THEN s.not_after ELSE NULL END
  FROM (SELECT 1) AS singleton
  LEFT JOIN auth.sessions s ON s.id=p_session AND s.user_id=p_user
  LEFT JOIN auth.users u ON u.id=s.user_id

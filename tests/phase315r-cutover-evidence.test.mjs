@@ -4,7 +4,9 @@ import {evaluateCutoverEvidence} from '../scripts/phase315r-cutover-evidence.mjs
 
 const safe=()=>({
  schemaVersion:1,snapshotKind:'growth_starter_privilege_cutover_catalog',
- roles:{gs315p_writer:{login:true,super:false,bypassRls:false},
+ roles:{gs315m_issuer:{login:true,super:false,bypassRls:false},
+ gs315k_gateway:{login:true,super:false,bypassRls:false},
+ gs315p_writer:{login:true,super:false,bypassRls:false},
  gs315p_ops_owner:{login:false,super:false,bypassRls:false},
  growth_starter_session_checker:{login:false,super:false,bypassRls:false}},
  legacyDefiners:0,legacyReaderExecutables:0,legacyAuthenticatedExecutables:0,
@@ -71,4 +73,18 @@ test('existing legacy roles can remain only when inert',()=>{
  assert.equal(find(report(x),'legacy_reader_inert').status,'BLOCKED');
  x.roles.growth_starter_runtime.login=false;
  assert.equal(find(report(x),'legacy_reader_inert').status,'PASS');
+});
+
+test('missing or privileged private issuer and gateway cannot pass catalog review',()=>{
+ for(const roleName of ['gs315m_issuer','gs315k_gateway']){
+  const id=roleName==='gs315m_issuer'?'issuer_identity':'gateway_identity';
+  const missing=safe();delete missing.roles[roleName];
+  assert.equal(find(report(missing),id).status,'BLOCKED');
+  assert.equal(report(missing).catalog.status,'BLOCKED');
+  for(const [field,value] of [['login',false],['super',true],['bypassRls',true]]){
+   const drift=safe();drift.roles[roleName][field]=value;
+   assert.equal(find(report(drift),id).status,'BLOCKED',roleName+':'+field);
+  }
+  assert.equal(find(report(safe()),id).status,'PASS');
+ }
 });

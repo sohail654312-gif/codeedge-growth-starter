@@ -8,7 +8,15 @@ DO $preflight$
 BEGIN
  IF current_setting('server_version_num')::integer NOT BETWEEN 170000 AND 179999
  OR to_regclass('auth.sessions') IS NULL OR to_regclass('auth.users') IS NULL
- OR NOT EXISTS(SELECT FROM pg_roles WHERE rolname='growth_starter_session_checker')
+ OR NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='growth_starter_session_checker'
+    AND NOT rolcanlogin AND NOT rolinherit AND NOT rolsuper AND NOT rolbypassrls
+    AND NOT rolcreaterole AND NOT rolcreatedb AND NOT rolreplication)
+ -- The checker must never be reachable through the public Data API role chain.
+ OR EXISTS(SELECT 1 FROM pg_roles api
+    JOIN pg_roles checker ON checker.rolname='growth_starter_session_checker'
+    WHERE api.rolname IN ('anon','authenticated','service_role','authenticator')
+    AND (pg_has_role(api.oid,checker.oid,'USAGE')
+      OR pg_has_role(api.oid,checker.oid,'SET')))
  OR to_regnamespace('growth_starter_auth_bridge') IS NOT NULL
  THEN RAISE EXCEPTION 'Phase 3.15S baseline denied'; END IF;
 END $preflight$;

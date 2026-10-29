@@ -46,6 +46,17 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   assert.equal((await snap()).pair_exists,true);
   assert.equal((await snap(other,sid)).pair_exists,false);
   assert.equal((await snap(owner,other)).pair_exists,false);
+  // Model a provider-side orphan after identity deletion or schema drift.
+  // The normal synthetic FK is removed ONLY inside this disposable database.
+  await db.query('ALTER TABLE auth.sessions DROP CONSTRAINT sessions_user_id_fkey');
+  const orphanUser='429d2e94-f1f0-4cd9-8bfa-0983be1434ab';
+  const orphanSession='639d2e94-f1f0-4cd9-8bfa-0983be1434ab';
+  await db.query("INSERT INTO auth.sessions(id,user_id,not_after) VALUES($1,$2,now()+interval '1 hour')",
+    [orphanSession,orphanUser]);
+  const orphan=await snap(orphanUser,orphanSession);
+  assert.equal(orphan.pair_exists,false,'an orphan session must never count as a valid pair');
+  assert.equal(orphan.session_not_after,null,'do not return expiry metadata for an orphan pair');
+  await db.query('DELETE FROM auth.sessions WHERE id=$1',[orphanSession]);
   await db.query('SET ROLE growth_starter_session_checker');
   try{
    await assert.rejects(db.query('SELECT id FROM auth.sessions'),denied);

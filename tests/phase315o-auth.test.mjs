@@ -32,3 +32,35 @@ test('authority requires exact identity, explicit account/session policy and bou
  assert.equal((await authority.checkProviderSession({userId,sessionId})).active,false);assert.equal(aborted,true);
  const cancelled=new AbortController();cancelled.abort();assert.equal((await authority.checkProviderSession({userId,sessionId,signal:cancelled.signal})).active,false);
 });
+
+test('exact-session checks deny aborted in-flight provider lookups that return late',async()=>{
+ const userId=randomUUID(),sessionId=randomUUID();
+ const row={userId,sessionId,exists:true,revoked:false,deleted:false,banned:false,
+  policyValid:true,expiresAt:Math.floor(Date.now()/1000)+120};
+ let lookupStarted;
+ const started=new Promise(resolve=>{lookupStarted=resolve;});
+ let finishLookup;
+ const late=new Promise(resolve=>{finishLookup=resolve;});
+ const controller=new AbortController();
+ const authority=createExactSessionAuthority({timeoutMs:500,
+  lookup:async()=>{lookupStarted();await late;return row;}});
+ const result=authority.checkProviderSession({userId,sessionId,signal:controller.signal});
+ await started;controller.abort();finishLookup();
+ assert.equal((await result).active,false);
+});
+test('untrusted provider errors and unknown policy facts cannot authenticate',async()=>{
+ const userId=randomUUID(),sessionId=randomUUID();
+ const row={userId,sessionId,exists:true,revoked:false,deleted:false,banned:false,
+  policyValid:true,expiresAt:Math.floor(Date.now()/1000)+120};
+ for(const result of [undefined,null,{}, {...row,policyValid:undefined},
+   {...row,revoked:undefined},{...row,deleted:undefined},
+   {...row,banned:undefined},{...row,exists:undefined}]){
+  const authority=createExactSessionAuthority({lookup:async()=>result});
+  assert.equal((await authority.checkProviderSession({userId,sessionId})).active,false);
+ }
+ for(const fail of [()=>{throw Error('provider unavailable');},
+   ()=>Promise.reject(Error('provider timeout'))]){
+  const authority=createExactSessionAuthority({lookup:fail});
+  assert.equal((await authority.checkProviderSession({userId,sessionId})).active,false);
+ }
+});

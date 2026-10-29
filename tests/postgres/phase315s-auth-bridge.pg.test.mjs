@@ -63,6 +63,13 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
    assert.equal(report.checksPassed,false,check);
    assert.ok(report.failedChecks.includes(check),JSON.stringify(report.failedChecks));
   }
+  // NOINHERIT on the checker does not prevent an unrelated member from SET ROLE.
+  // Even without direct ACL grants, that member can assume the checker authority.
+  await db.query('GRANT growth_starter_session_checker TO gs315s_untrusted');
+  await expectCatalogFailure('checker_has_no_members');
+  const membership=(await db.query("SELECT pg_has_role('gs315s_untrusted','growth_starter_session_checker','SET') AS can_set")).rows[0];
+  assert.equal(membership.can_set,true,'unexpected member can assume checker role');
+  await db.query('REVOKE growth_starter_session_checker FROM gs315s_untrusted');
   // Non-API principals must not gain direct private bridge grants either.
   await db.query('GRANT USAGE ON SCHEMA growth_starter_auth_bridge TO gs315s_untrusted');
   await expectCatalogFailure('schema_acl_restricted');

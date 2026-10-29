@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - 'review/growth-starter-auth-bridge-disposable-*'
+      - 'review/growth-starter-auth-bridge-orphan-*'
     paths:
       - 'db/drafts/phase315s_exact_auth_bridge_REVIEW_ONLY.sql'
       - 'tests/postgres/phase315s-auth-bridge.pg.test.mjs'

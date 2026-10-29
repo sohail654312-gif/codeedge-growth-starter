@@ -137,6 +137,8 @@ export async function createRestrictedStagingPool({ rawPool }) {
         // Revalidate before SET ROLE or executing any tenant read function.
         await verifyConnection(client);
         await client.query('SET LOCAL ROLE growth_starter_reader');
+        const effective = await client.query('SELECT current_user AS role_name');
+        if (effective.rows?.[0]?.role_name !== 'growth_starter_reader') fail();
         await client.query("SET LOCAL statement_timeout = '2000ms'");
         await client.query("SET LOCAL idle_in_transaction_session_timeout = '3000ms'");
         const result = await client.query(sql, args);

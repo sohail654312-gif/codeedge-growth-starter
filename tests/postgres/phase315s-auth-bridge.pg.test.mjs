@@ -77,6 +77,11 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   const ownerMembership=(await db.query("SELECT pg_has_role('gs315s_untrusted','gs_test','SET') AS can_set")).rows[0];
   assert.equal(ownerMembership.can_set,true,'unexpected member can assume function owner');
   await db.query('REVOKE gs_test FROM gs315s_untrusted');
+  // A distinct schema owner controls namespace DDL even while the privileged
+  // function remains owned by gs_test. The catalog must deny this drift.
+  await db.query('ALTER SCHEMA growth_starter_auth_bridge OWNER TO gs315s_untrusted');
+  await expectCatalogFailure('schema_owner_matches_function_owner');
+  await db.query('ALTER SCHEMA growth_starter_auth_bridge OWNER TO gs_test');
   // Non-API principals must not gain direct private bridge grants either.
   await db.query('GRANT USAGE ON SCHEMA growth_starter_auth_bridge TO gs315s_untrusted');
   await expectCatalogFailure('schema_acl_restricted');

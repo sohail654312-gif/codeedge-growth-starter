@@ -54,6 +54,10 @@ WITH bridge AS (
   NOT EXISTS(SELECT 1 FROM api a CROSS JOIN checker c
       WHERE pg_has_role(a.oid,c.oid,'USAGE') OR pg_has_role(a.oid,c.oid,'SET'))
       AS checker_not_api_reachable,
+  -- NOINHERIT on the checker does not prevent a member role from SET ROLE.
+  -- Until a separately reviewed runtime role is approved, no membership is safe.
+  NOT EXISTS(SELECT 1 FROM pg_auth_members m JOIN checker c ON m.roleid=c.oid)
+      AS checker_has_no_members,
   NOT EXISTS(SELECT 1 FROM api a CROSS JOIN bridge b
       WHERE has_schema_privilege(a.oid,b.schema_oid,'USAGE')
          OR has_function_privilege(a.oid,b.oid,'EXECUTE')) AS api_no_bridge_access,
@@ -95,6 +99,7 @@ WITH bridge AS (
   ('checker_has_narrow_access',f.checker_has_narrow_access),
   ('checker_no_raw_auth',f.checker_no_raw_auth),
   ('checker_not_api_reachable',f.checker_not_api_reachable),
+  ('checker_has_no_members',f.checker_has_no_members),
   ('api_no_bridge_access',f.api_no_bridge_access),
   ('schema_acl_restricted',f.schema_acl_restricted),
   ('function_acl_restricted',f.function_acl_restricted),

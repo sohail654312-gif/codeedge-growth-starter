@@ -4,6 +4,7 @@ on:
     branches:
       - 'review/growth-starter-auth-bridge-disposable-*'
       - 'review/growth-starter-auth-bridge-orphan-*'
+      - 'review/growth-starter-auth-bridge-checker-membership-*'
     paths:
       - 'db/drafts/phase315s_exact_auth_bridge_REVIEW_ONLY.sql'
       - 'db/reviews/phase315s_auth_bridge_catalog_READ_ONLY.sql'

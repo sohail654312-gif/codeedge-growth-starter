@@ -39,11 +39,15 @@ export const PRIVATE_RUNTIME_PREFLIGHT=`SELECT current_user AS actor,session_use
 
 async function preflight(pool,role,functions){
  const row=(await pool.query(PRIVATE_RUNTIME_PREFLIGHT)).rows?.[0];
- if(!row||row.actor!==role||row.login!==role||!row.rolcanlogin||row.rolinherit||row.rolsuper||
- row.rolbypassrls||row.rolcreaterole||row.rolcreatedb||row.rolreplication||row.memberships||
- row.business_schema||row.db_create||row.public_functions!==0||row.safe_owners!==3||row.private_rls!==2||
- !Array.isArray(row.accessible_tables)||row.accessible_tables.length||
- JSON.stringify(row.executable)!==JSON.stringify([...functions].sort()))unavailable();
+ // A missing or null PostgreSQL privilege flag is UNKNOWN, not false.
+ // Every forbidden privilege must be explicitly false for both LOGIN pools.
+ const forbidden=['rolinherit','rolsuper','rolbypassrls','rolcreaterole',
+  'rolcreatedb','rolreplication','memberships','business_schema','db_create'];
+ if(!row||row.actor!==role||row.login!==role||row.rolcanlogin!==true||
+  forbidden.some(key=>row[key]!==false)||
+  row.public_functions!==0||row.safe_owners!==3||row.private_rls!==2||
+  !Array.isArray(row.accessible_tables)||row.accessible_tables.length||
+  JSON.stringify(row.executable)!==JSON.stringify([...functions].sort()))unavailable();
 }
 async function transaction(pool,run){
  let c,open=false;

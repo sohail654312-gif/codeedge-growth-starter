@@ -6,6 +6,7 @@ import {createPrivateHttpsCookieHandler} from '../backend/phase315e-https-cookie
 import {validateFreshProviderIdentity} from '../backend/phase315d-fresh-login.mjs';
 import {createSupabasePkceHttpAdapter} from '../backend/phase315g-supabase-pkce-adapter.mjs';
 import {readPhase315mConfig,createPhase315mIngress} from '../staging/phase315m-config.mjs';
+import {createPhase315mPrivateRuntime} from '../backend/phase315m-private-runtime.mjs';
 const APP='https://clinic.example.invalid',PROJECT='https://fictional-proj.supabase.co';
 const opaque=()=>randomBytes(32).toString('base64url');
 async function request(handler,path,{method='GET',headers={},body='',tls=true}={}){
@@ -91,4 +92,43 @@ test('staging configuration cannot infer owner/reviewer approval or accept broad
  assert.equal(secure({...proxyReq,socket:{remoteAddress:'203.0.113.1'}}),false);
  assert.equal(secure({...proxyReq,headers:{'x-forwarded-proto':'http'}}),false);
  assert.equal(secure({...proxyReq,headers:{...proxyReq.headers,'x-forwarded-host':'attacker.invalid'}}),false);
+});
+
+test('private issuer and gateway preflights reject unknown or ill-typed privilege facts',async()=>{
+ const rowFor=role=>({
+  actor:role,login:role,rolcanlogin:true,rolinherit:false,rolsuper:false,
+  rolbypassrls:false,rolcreaterole:false,rolcreatedb:false,rolreplication:false,
+  memberships:false,business_schema:false,db_create:false,
+  public_functions:0,safe_owners:3,private_rls:2,accessible_tables:[],
+  executable:role==='gs315m_issuer'
+   ?['begin_login','consume_login','issue_session']
+   :['read_requests','revoke_session','session_context']
+ });
+ const issuer=rowFor('gs315m_issuer'),gateway=rowFor('gs315k_gateway');
+ const pool=row=>({
+  query:async()=>({rows:[row]}),
+  connect:async()=>{throw Error('Unexpected database operation in source-only preflight test.');}
+ });
+ const start=(issuerPatch={},gatewayPatch={})=>createPhase315mPrivateRuntime({
+  issuerPool:pool({...issuer,...issuerPatch}),
+  gatewayPool:pool({...gateway,...gatewayPatch}),
+  provider:{sendLoginEmail:async()=>{},exchangeAuthCode:async()=>{},verifyUser:async()=>{}},
+  projectUrl:PROJECT+'/',appOrigin:APP+'/',csrfSigningKey:randomBytes(32),
+  checkProviderSession:async()=>({active:false})
+ });
+ const accepted=await start();
+ assert.equal(accepted.status,'restricted_source_runtime_hosted_acceptance_pending');
+ assert.equal((await accepted.ready()).releaseReady,false);
+ const forbidden=['rolinherit','rolsuper','rolbypassrls','rolcreaterole',
+  'rolcreatedb','rolreplication','memberships','business_schema','db_create'];
+ for(const key of forbidden){
+  for(const value of [undefined,null,'false']){
+   await assert.rejects(start({[key]:value}),/unavailable/,key+' issuer');
+   await assert.rejects(start({}, {[key]:value}),/unavailable/,key+' gateway');
+  }
+ }
+ for(const value of [undefined,null,'true',1]){
+  await assert.rejects(start({rolcanlogin:value}),/unavailable/,'issuer LOGIN');
+  await assert.rejects(start({}, {rolcanlogin:value}),/unavailable/,'gateway LOGIN');
+ }
 });

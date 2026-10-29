@@ -10,6 +10,8 @@ on:
       - 'tests/phase315o-auth.test.mjs'
       - 'backend/pg-session-authority.mjs'
       - 'backend/pg-session-authority.test.mjs'
+      - 'backend/phase315m-private-runtime.mjs'
+      - 'tests/phase315m-private-transport.test.mjs'
       - 'tests/phase315r-cutover-evidence.test.mjs'
       - '.github/workflows/cutover-catalog-review.yml'
       - 'GROWTH-STARTER-COMPLETION-BASELINE.md'
@@ -21,9 +23,12 @@ on:
     branches:
       - engineering/phase2-core-security
       - 'review/growth-starter-completion-baseline-*'
+      - 'review/growth-starter-auth-cutover-hardening-*'
     paths:
       - 'scripts/phase315r-cutover-evidence.mjs'
       - 'tests/phase315r-cutover-evidence.test.mjs'
+      - 'backend/phase315m-private-runtime.mjs'
+      - 'tests/phase315m-private-transport.test.mjs'
       - '.github/workflows/cutover-catalog-review.yml'
       - 'GROWTH-STARTER-COMPLETION-BASELINE.md'
       - 'AUTH-AUTHORITY-ACCEPTANCE.md'

@@ -86,6 +86,14 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   await db.query('GRANT USAGE ON SCHEMA growth_starter_auth_bridge TO gs315s_untrusted');
   await expectCatalogFailure('schema_acl_restricted');
   await db.query('REVOKE USAGE ON SCHEMA growth_starter_auth_bridge FROM gs315s_untrusted');
+  // CREATE is a distinct namespace privilege: a role without USAGE must not
+  // be able to introduce private-schema objects; nor may the checker do so.
+  await db.query('GRANT CREATE ON SCHEMA growth_starter_auth_bridge TO gs315s_untrusted');
+  await expectCatalogFailure('schema_no_external_create');
+  await db.query('REVOKE CREATE ON SCHEMA growth_starter_auth_bridge FROM gs315s_untrusted');
+  await db.query('GRANT CREATE ON SCHEMA growth_starter_auth_bridge TO growth_starter_session_checker');
+  await expectCatalogFailure('schema_no_external_create');
+  await db.query('REVOKE CREATE ON SCHEMA growth_starter_auth_bridge FROM growth_starter_session_checker');
   await db.query('GRANT EXECUTE ON FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) TO gs315s_untrusted');
   await expectCatalogFailure('function_acl_restricted');
   await db.query('REVOKE EXECUTE ON FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) FROM gs315s_untrusted');

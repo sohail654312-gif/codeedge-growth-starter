@@ -15,7 +15,7 @@ permissions:
 jobs:
   isolated-auth-bridge:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     services:
       postgres:
         image: postgres:17-alpine
@@ -42,3 +42,5 @@ jobs:
         run: node --check tests/postgres/phase315s-auth-bridge.pg.test.mjs
       - name: Prove restricted Auth bridge in disposable PostgreSQL 17
         run: node --test --test-concurrency=1 tests/postgres/phase315s-auth-bridge.pg.test.mjs
+      - name: Rehearse O-K-M-P restricted PostgreSQL 17 migrations and rollback
+        run: node --test --test-concurrency=1 tests/postgres/*.test.mjs

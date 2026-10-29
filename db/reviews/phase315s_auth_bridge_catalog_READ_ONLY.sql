@@ -57,6 +57,22 @@ WITH bridge AS (
   NOT EXISTS(SELECT 1 FROM api a CROSS JOIN bridge b
       WHERE has_schema_privilege(a.oid,b.schema_oid,'USAGE')
          OR has_function_privilege(a.oid,b.oid,'EXECUTE')) AS api_no_bridge_access,
+  -- A non-API role must not receive a separate route to the private bridge.
+  NOT EXISTS(SELECT 1 FROM bridge b CROSS JOIN checker c
+      CROSS JOIN LATERAL aclexplode(COALESCE(b.nspacl,acldefault('n',b.nspowner))) acl
+      WHERE acl.privilege_type='USAGE'
+        AND acl.grantee NOT IN (b.nspowner,c.oid)) AS schema_acl_restricted,
+  NOT EXISTS(SELECT 1 FROM bridge b CROSS JOIN checker c
+      CROSS JOIN LATERAL aclexplode(COALESCE(b.proacl,acldefault('f',b.proowner))) acl
+      WHERE acl.privilege_type='EXECUTE'
+        AND acl.grantee NOT IN (b.proowner,c.oid)) AS function_acl_restricted,
+  -- The checker may call the function but must not delegate its authority.
+  (NOT EXISTS(SELECT 1 FROM bridge b CROSS JOIN checker c
+      CROSS JOIN LATERAL aclexplode(COALESCE(b.nspacl,acldefault('n',b.nspowner))) acl
+      WHERE acl.grantee=c.oid AND acl.is_grantable)
+   AND NOT EXISTS(SELECT 1 FROM bridge b CROSS JOIN checker c
+      CROSS JOIN LATERAL aclexplode(COALESCE(b.proacl,acldefault('f',b.proowner))) acl
+      WHERE acl.grantee=c.oid AND acl.is_grantable)) AS checker_no_grant_option,
   NOT EXISTS(SELECT 1 FROM bridge b,
       LATERAL aclexplode(COALESCE(b.nspacl,acldefault('n',b.nspowner))) acl
       WHERE acl.grantee=0 AND acl.privilege_type='USAGE') AS public_no_schema_usage,
@@ -80,6 +96,9 @@ WITH bridge AS (
   ('checker_no_raw_auth',f.checker_no_raw_auth),
   ('checker_not_api_reachable',f.checker_not_api_reachable),
   ('api_no_bridge_access',f.api_no_bridge_access),
+  ('schema_acl_restricted',f.schema_acl_restricted),
+  ('function_acl_restricted',f.function_acl_restricted),
+  ('checker_no_grant_option',f.checker_no_grant_option),
   ('public_no_schema_usage',f.public_no_schema_usage),
   ('public_no_function_execute',f.public_no_function_execute)
  ) AS v(name,ok)

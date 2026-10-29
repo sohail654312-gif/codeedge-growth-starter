@@ -5,7 +5,7 @@ import {createPgSessionAuthority} from './pg-session-authority.mjs';
 const A='329d2e94-f1f0-4cd9-8bfa-0983be1434ab',SID='539d2e94-f1f0-4cd9-8bfa-0983be1434ab';
 const fields=['rolcanlogin','auth_schema','session_id','session_user','session_until','user_id',
  'banned_until','deleted_at'];
-function fixture({revoke=false,missing=false,security={},policy={},queryError=false}={}){
+function fixture({revoke=false,missing=false,security={},runtimeSecurity={},policy={},queryError=false}={}){
  const calls=[];
  const flags={actor:'growth_starter_session_checker',login:'growth_starter_session_checker',
   rolcanlogin:true,rolsuper:false,rolbypassrls:false,rolinherit:false,rolcreaterole:false,
@@ -19,11 +19,14 @@ function fixture({revoke=false,missing=false,security={},policy={},queryError=fa
  const policies={expected_policies:3,rls_tables:7,auth_schema_usage:true,ws_select:true,
   member_select:true,request_select:true,legacy_list:false,legacy_requests:false,
   runtime_list:false,runtime_requests:false,...policy};
- const pool={connect:async()=>({
+ let connections=0;
+ const pool={connect:async()=>{
+  const connection=++connections;
+  return {
   query:async(sql,args)=>{
    calls.push({sql,args});
    if(queryError && sql.includes('FROM auth.sessions'))throw Error('backend outage');
-   if(sql.includes('FROM pg_roles r'))return{rows:[flags]};
+   if(sql.includes('FROM pg_roles r'))return{rows:[connection===1?flags:{...flags,...runtimeSecurity}]};
    if(sql===CATALOG_SQL)return{rows:[syntheticAcceptedCatalogForTests()]};
    if(sql.includes('FROM pg_policies'))return{rows:[policies]};
    if(sql.includes('FROM auth.sessions'))return{rows:missing||revoke?[]:[{
@@ -31,7 +34,7 @@ function fixture({revoke=false,missing=false,security={},policy={},queryError=fa
    }]};
    return{rows:[]};
   },release(){}
- })};
+ };}};
  return{pool,calls,fields};
 }
 test('fail-closed PostgreSQL principal and effective RLS/grants are checked before startup',async()=>{
@@ -80,4 +83,27 @@ test('unknown privilege and policy facts fail closed instead of silently passing
   await assert.rejects(createPgSessionAuthority({pool:fixture({policy}).pool}),
    /unavailable/,JSON.stringify(policy));
  }
+});
+
+test('pooled session checks revalidate the actual connection before reading Auth rows',async()=>{
+ for(const runtimeSecurity of [
+  {actor:'postgres',login:'postgres'},
+  {rolsuper:true},
+  {can_set_authenticated:true},
+  {session_full_select:true},
+  {extra_user_columns:['email']},
+  {rolbypassrls:undefined}
+ ]){
+  const f=fixture({runtimeSecurity});
+  const authority=await createPgSessionAuthority({pool:f.pool});
+  await assert.rejects(authority.checkAuthoritativeSession({userId:A,sessionId:SID}),
+   /unavailable/,'unexpected pooled connection authority must fail closed');
+  assert.equal(f.calls.filter(x=>x.sql.includes('FROM auth.sessions')).length,0,
+   'no Auth session read may occur on an unverified pooled connection');
+ }
+ const f=fixture();
+ const authority=await createPgSessionAuthority({pool:f.pool});
+ assert.equal((await authority.checkAuthoritativeSession({userId:A,sessionId:SID})).active,true);
+ assert.equal(f.calls.filter(x=>x.sql.includes('FROM pg_roles r')).length,2,
+  'startup and active-session read each inspect their acquired connection');
 });

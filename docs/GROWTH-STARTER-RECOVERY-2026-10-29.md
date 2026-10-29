@@ -57,6 +57,13 @@ replace the security and release gates in
   3 privileged legacy functions and reader-role switching still present.
 - The private replacement schema is absent. The dedicated checker lacks
   `USAGE` on managed `auth`, despite scoped columns already granted.
+- The existing `work_requests` read policy checks active `workspaces` but does
+  not explicitly repeat a membership predicate. Its subquery is expected to
+  inherit the `workspaces` SELECT RLS policy (which does check owner/member),
+  so this is **not proof of cross-tenant disclosure**. Keep both RLS policies
+  and verify with direct signed own-tenant/foreign-tenant probes before any
+  cutover; never assume indirect RLS will remain effective after grant or
+  policy refactoring.
 - Seven existing hosted migrations observed, with the same identifiers as
   the October 14 handoff. No migrations executed in this recovery check.
 

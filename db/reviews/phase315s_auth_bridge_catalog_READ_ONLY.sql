@@ -45,6 +45,10 @@ WITH bridge AS (
   -- No owner-role memberships are approved in this review-only catalog.
   NOT EXISTS(SELECT 1 FROM pg_auth_members m JOIN bridge b ON m.roleid=b.proowner)
       AS owner_has_no_members,
+  -- A separate namespace owner can change private-schema DDL and grants.
+  -- This review-only bridge requires one vetted owner for schema and function.
+  COALESCE((SELECT b.nspowner=b.proowner FROM bridge b),false)
+      AS schema_owner_matches_function_owner,
   COALESCE((SELECT has_schema_privilege(c.oid,b.schema_oid,'USAGE')
       AND has_function_privilege(c.oid,b.oid,'EXECUTE')
       FROM checker c CROSS JOIN bridge b),false) AS checker_has_narrow_access,
@@ -102,6 +106,7 @@ WITH bridge AS (
   ('owner_not_checker',f.owner_not_checker),
   ('owner_not_api_reachable',f.owner_not_api_reachable),
   ('owner_has_no_members',f.owner_has_no_members),
+  ('schema_owner_matches_function_owner',f.schema_owner_matches_function_owner),
   ('checker_has_narrow_access',f.checker_has_narrow_access),
   ('checker_no_raw_auth',f.checker_no_raw_auth),
   ('checker_not_api_reachable',f.checker_not_api_reachable),

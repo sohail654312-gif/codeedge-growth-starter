@@ -40,6 +40,11 @@ WITH bridge AS (
   NOT EXISTS(SELECT 1 FROM api a CROSS JOIN bridge b
       WHERE a.oid=b.proowner OR pg_has_role(a.oid,b.proowner,'USAGE')
       OR pg_has_role(a.oid,b.proowner,'SET')) AS owner_not_api_reachable,
+  -- Any incoming owner-role grant can let a non-API member SET ROLE to the
+  -- SECURITY DEFINER owner. A direct incoming edge also covers indirect paths.
+  -- No owner-role memberships are approved in this review-only catalog.
+  NOT EXISTS(SELECT 1 FROM pg_auth_members m JOIN bridge b ON m.roleid=b.proowner)
+      AS owner_has_no_members,
   COALESCE((SELECT has_schema_privilege(c.oid,b.schema_oid,'USAGE')
       AND has_function_privilege(c.oid,b.oid,'EXECUTE')
       FROM checker c CROSS JOIN bridge b),false) AS checker_has_narrow_access,
@@ -96,6 +101,7 @@ WITH bridge AS (
   ('owner_can_read_auth',f.owner_can_read_auth),
   ('owner_not_checker',f.owner_not_checker),
   ('owner_not_api_reachable',f.owner_not_api_reachable),
+  ('owner_has_no_members',f.owner_has_no_members),
   ('checker_has_narrow_access',f.checker_has_narrow_access),
   ('checker_no_raw_auth',f.checker_no_raw_auth),
   ('checker_not_api_reachable',f.checker_not_api_reachable),

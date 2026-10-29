@@ -70,6 +70,13 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   const membership=(await db.query("SELECT pg_has_role('gs315s_untrusted','growth_starter_session_checker','SET') AS can_set")).rows[0];
   assert.equal(membership.can_set,true,'unexpected member can assume checker role');
   await db.query('REVOKE growth_starter_session_checker FROM gs315s_untrusted');
+  // A non-API member of the SECURITY DEFINER function owner can SET ROLE
+  // into that owner. This must be rejected even without any direct bridge ACL.
+  await db.query('GRANT gs_test TO gs315s_untrusted');
+  await expectCatalogFailure('owner_has_no_members');
+  const ownerMembership=(await db.query("SELECT pg_has_role('gs315s_untrusted','gs_test','SET') AS can_set")).rows[0];
+  assert.equal(ownerMembership.can_set,true,'unexpected member can assume function owner');
+  await db.query('REVOKE gs_test FROM gs315s_untrusted');
   // Non-API principals must not gain direct private bridge grants either.
   await db.query('GRANT USAGE ON SCHEMA growth_starter_auth_bridge TO gs315s_untrusted');
   await expectCatalogFailure('schema_acl_restricted');

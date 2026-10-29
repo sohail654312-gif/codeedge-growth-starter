@@ -8,6 +8,8 @@ on:
       - 'scripts/phase315r-cutover-evidence.mjs'
       - 'db/reviews/phase315r_effective_privileges_READ_ONLY.sql'
       - 'tests/phase315o-auth.test.mjs'
+      - 'backend/pg-session-authority.mjs'
+      - 'backend/pg-session-authority.test.mjs'
       - 'tests/phase315r-cutover-evidence.test.mjs'
       - '.github/workflows/cutover-catalog-review.yml'
       - 'GROWTH-STARTER-COMPLETION-BASELINE.md'

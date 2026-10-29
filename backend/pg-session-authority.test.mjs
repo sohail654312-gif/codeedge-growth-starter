@@ -10,7 +10,7 @@ function fixture({revoke=false,missing=false,security={},policy={},queryError=fa
  const flags={actor:'growth_starter_session_checker',login:'growth_starter_session_checker',
   rolcanlogin:true,rolsuper:false,rolbypassrls:false,rolinherit:false,rolcreaterole:false,
   rolcreatedb:false,rolreplication:false,can_set_authenticated:false,can_set_service_role:false,
-  can_set_legacy_reader:false,auth_schema:true,session_id:true,session_user:true,
+  can_set_legacy_reader:false,can_set_postgres:false,auth_schema:true,session_id:true,session_user:true,
   session_until:true,user_id:true,banned_until:true,deleted_at:true,
   session_insert:false,session_update:false,session_delete:false,user_update:false,
   session_full_select:false,user_full_select:false,
@@ -59,4 +59,25 @@ test('session row absence, outage and malformed identity deny without bypass',as
  const down=await createPgSessionAuthority({pool:fixture({queryError:true}).pool});
  await assert.rejects(down.checkAuthoritativeSession({userId:A,sessionId:SID}),/unavailable/);
  await assert.rejects(createPgSessionAuthority({pool:null}),/unavailable/);
+});
+
+// Preflight is an authorization boundary: omitted/null/ill-typed booleans must
+// not be interpreted as false (and thus safe) by JavaScript truthiness.
+test('unknown privilege and policy facts fail closed instead of silently passing',async()=>{
+ for(const security of [
+  {rolsuper:undefined},{rolbypassrls:null},{can_set_postgres:undefined},
+  {can_set_legacy_reader:null},{session_update:undefined},
+  {db_create:'false'},{auth_schema:1},{rolcanlogin:'true'}
+ ]){
+  await assert.rejects(createPgSessionAuthority({pool:fixture({security}).pool}),
+   /unavailable/,JSON.stringify(security));
+ }
+ for(const policy of [
+  {legacy_list:undefined},{runtime_requests:null},{runtime_list:'false'},
+  {ws_select:undefined},{auth_schema_usage:1},{expected_policies:'3'},
+  {rls_tables:'7'}
+ ]){
+  await assert.rejects(createPgSessionAuthority({pool:fixture({policy}).pool}),
+   /unavailable/,JSON.stringify(policy));
+ }
 });

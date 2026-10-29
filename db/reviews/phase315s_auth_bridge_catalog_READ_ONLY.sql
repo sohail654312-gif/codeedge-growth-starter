@@ -75,6 +75,12 @@ WITH bridge AS (
       CROSS JOIN LATERAL aclexplode(COALESCE(b.nspacl,acldefault('n',b.nspowner))) acl
       WHERE acl.privilege_type='USAGE'
         AND acl.grantee NOT IN (b.nspowner,c.oid)) AS schema_acl_restricted,
+  -- CREATE on the private namespace lets a non-owner introduce objects even
+  -- without USAGE. Only the vetted schema owner may hold CREATE authority.
+  NOT EXISTS(SELECT 1 FROM bridge b
+      CROSS JOIN LATERAL aclexplode(COALESCE(b.nspacl,acldefault('n',b.nspowner))) acl
+      WHERE acl.privilege_type='CREATE' AND acl.grantee<>b.nspowner)
+      AS schema_no_external_create,
   NOT EXISTS(SELECT 1 FROM bridge b CROSS JOIN checker c
       CROSS JOIN LATERAL aclexplode(COALESCE(b.proacl,acldefault('f',b.proowner))) acl
       WHERE acl.privilege_type='EXECUTE'
@@ -113,6 +119,7 @@ WITH bridge AS (
   ('checker_has_no_members',f.checker_has_no_members),
   ('api_no_bridge_access',f.api_no_bridge_access),
   ('schema_acl_restricted',f.schema_acl_restricted),
+  ('schema_no_external_create',f.schema_no_external_create),
   ('function_acl_restricted',f.function_acl_restricted),
   ('checker_no_grant_option',f.checker_no_grant_option),
   ('public_no_schema_usage',f.public_no_schema_usage),

@@ -82,6 +82,9 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   await db.query('GRANT SELECT ON auth.sessions TO growth_starter_session_checker');
   await expectCatalogFailure('checker_no_raw_auth');
   await db.query('REVOKE SELECT ON auth.sessions FROM growth_starter_session_checker');
+  await db.query('GRANT SELECT (id) ON auth.sessions TO growth_starter_session_checker');
+  await expectCatalogFailure('checker_no_raw_auth');
+  await db.query('REVOKE SELECT (id) ON auth.sessions FROM growth_starter_session_checker');
   await db.query('ALTER ROLE growth_starter_session_checker LOGIN');
   await expectCatalogFailure('checker_restricted');
   await db.query('ALTER ROLE growth_starter_session_checker NOLOGIN');

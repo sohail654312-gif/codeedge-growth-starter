@@ -46,6 +46,10 @@ WITH bridge AS (
   COALESCE((SELECT NOT has_schema_privilege(c.oid,a.schema_oid,'USAGE')
       AND NOT has_table_privilege(c.oid,a.sessions_oid,'SELECT')
       AND NOT has_table_privilege(c.oid,a.users_oid,'SELECT')
+      AND NOT EXISTS(SELECT 1 FROM pg_attribute col
+          WHERE col.attrelid IN (a.sessions_oid,a.users_oid)
+            AND col.attnum>0 AND NOT col.attisdropped
+            AND has_column_privilege(c.oid,col.attrelid,col.attnum,'SELECT'))
       FROM checker c CROSS JOIN auth_objs a),false) AS checker_no_raw_auth,
   NOT EXISTS(SELECT 1 FROM api a CROSS JOIN checker c
       WHERE pg_has_role(a.oid,c.oid,'USAGE') OR pg_has_role(a.oid,c.oid,'SET'))

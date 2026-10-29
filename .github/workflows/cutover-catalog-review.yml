@@ -3,17 +3,31 @@ on:
   push:
     branches:
       - 'review/growth-starter-completion-baseline-*'
+      - 'review/growth-starter-auth-cutover-hardening-*'
     paths:
       - 'scripts/phase315r-cutover-evidence.mjs'
+      - 'db/reviews/phase315r_effective_privileges_READ_ONLY.sql'
+      - 'tests/phase315o-auth.test.mjs'
       - 'tests/phase315r-cutover-evidence.test.mjs'
       - '.github/workflows/cutover-catalog-review.yml'
+      - 'GROWTH-STARTER-COMPLETION-BASELINE.md'
+      - 'AUTH-AUTHORITY-ACCEPTANCE.md'
+      - 'DATABASE-CUTOVER-READINESS.md'
+      - 'CLIENT-WORKSPACE-ACCEPTANCE.md'
+      - 'GROWTH-STARTER-NEXT-RELEASE-REPORT.md'
   pull_request:
     branches:
       - engineering/phase2-core-security
+      - 'review/growth-starter-completion-baseline-*'
     paths:
       - 'scripts/phase315r-cutover-evidence.mjs'
       - 'tests/phase315r-cutover-evidence.test.mjs'
       - '.github/workflows/cutover-catalog-review.yml'
+      - 'GROWTH-STARTER-COMPLETION-BASELINE.md'
+      - 'AUTH-AUTHORITY-ACCEPTANCE.md'
+      - 'DATABASE-CUTOVER-READINESS.md'
+      - 'CLIENT-WORKSPACE-ACCEPTANCE.md'
+      - 'GROWTH-STARTER-NEXT-RELEASE-REPORT.md'
 permissions:
   contents: read
 jobs:
@@ -27,5 +41,7 @@ jobs:
           node-version: '22'
       - name: Verify evidence-only script syntax
         run: node --check scripts/phase315r-cutover-evidence.mjs
-      - name: Run fail-closed private issuer/gateway regression tests
+      - name: Run fail-closed issuer, gateway and privilege regressions
         run: node --test tests/phase315r-cutover-evidence.test.mjs
+      - name: Run entire source regression suite without network or secrets
+        run: node --test tests/*.test.mjs backend/pg-session-authority.test.mjs

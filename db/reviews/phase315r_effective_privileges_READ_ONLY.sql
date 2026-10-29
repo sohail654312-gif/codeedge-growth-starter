@@ -13,15 +13,19 @@ WITH legacy AS (
  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
  WHERE n.nspname IN ('growth_starter','growth_starter_private') AND c.relkind IN ('r','p')
 ), role_catalog AS (
- SELECT r.oid,r.rolname,r.rolcanlogin,r.rolsuper,r.rolbypassrls
+ SELECT r.oid,r.rolname,r.rolcanlogin,r.rolsuper,r.rolbypassrls,
+  r.rolinherit,r.rolcreatedb,r.rolcreaterole,r.rolreplication
  FROM pg_roles r WHERE r.rolname IN (
  'growth_starter_reader','growth_starter_runtime','growth_starter_session_checker',
  'gs315m_issuer','gs315k_gateway','gs315p_writer','gs315p_ops_owner')
 )
 SELECT jsonb_build_object(
- 'schemaVersion',1,'snapshotKind','growth_starter_privilege_cutover_catalog',
+ 'schemaVersion',2,'snapshotKind','growth_starter_privilege_cutover_catalog',
  'roles',(SELECT COALESCE(jsonb_object_agg(rolname,jsonb_build_object(
-    'login',rolcanlogin,'super',rolsuper,'bypassRls',rolbypassrls)),'{}'::jsonb) FROM role_catalog),
+    'login',rolcanlogin,'super',rolsuper,'bypassRls',rolbypassrls,
+    'inherit',rolinherit,'createDb',rolcreatedb,'createRole',rolcreaterole,
+    'replication',rolreplication,'grantedRoles',(
+       SELECT count(*)::int FROM pg_auth_members m WHERE m.member=role_catalog.oid))),'{}'::jsonb) FROM role_catalog),
  'legacyDefiners',(SELECT count(*)::int FROM legacy WHERE prosecdef),
  'legacyReaderExecutables',(SELECT count(*)::int FROM legacy l WHERE l.prosecdef AND EXISTS(
     SELECT 1 FROM role_catalog r WHERE r.rolname='growth_starter_reader'

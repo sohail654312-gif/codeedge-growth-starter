@@ -24,9 +24,7 @@ function isSafeSubject(value) {
  */
 export async function createRestrictedStagingPool({ rawPool }) {
   if (!rawPool || typeof rawPool.connect !== 'function') fail();
-  const conn = await rawPool.connect();
-  try {
-    const query = `
+  const privilegeSQL = `
       SELECT
         current_user AS database_login,
         session_user AS authenticated_login,
@@ -76,18 +74,30 @@ export async function createRestrictedStagingPool({ rawPool }) {
       FROM pg_roles r CROSS JOIN pg_roles rr
       WHERE r.rolname=current_user AND rr.rolname='growth_starter_reader'
     `;
-    const result = await conn.query(query);
+  // Each physical pool connection must independently satisfy the catalog gate.
+  // Unknown or incorrectly typed facts are unsafe, not equivalent to false.
+  async function verifyConnection(conn) {
+    const result = await conn.query(privilegeSQL);
     const r = result.rows?.[0];
-    if (!r || !r.rolcanlogin || r.database_login !== r.authenticated_login ||
+    const forbidden = [
+      'rolsuper','rolbypassrls','rolcreatedb','rolcreaterole',
+      'rolreplication','rolinherit','can_create_db_objects',
+      'can_create_schema_objects','direct_table_access',
+      'reader_can_login','reader_super','reader_bypassrls',
+      'reader_create_role','reader_create_db','reader_inherit',
+      'reader_can_create','reader_direct_table_access',
+      'reader_extra_functions'
+    ];
+    if (!r || typeof r.database_login !== 'string' ||
+        r.database_login.length === 0 ||
+        r.database_login !== r.authenticated_login ||
         r.database_login === 'growth_starter_reader' ||
-        r.rolsuper || r.rolbypassrls || r.rolcreatedb ||
-        r.rolcreaterole || r.rolreplication || r.rolinherit ||
-        !r.can_set_reader || r.can_create_db_objects ||
-        r.can_create_schema_objects || r.direct_table_access ||
-        r.reader_can_login || r.reader_super || r.reader_bypassrls ||
-        r.reader_create_role || r.reader_create_db || r.reader_inherit ||
-        r.reader_can_create || r.reader_direct_table_access ||
-        r.reader_extra_functions) fail();
+        r.rolcanlogin !== true || r.can_set_reader !== true ||
+        forbidden.some(key => r[key] !== false)) fail();
+  }
+  const conn = await rawPool.connect();
+  try {
+    await verifyConnection(conn);
 
     // Prove the runtime can only enter the reader role for read-only statements.
     await conn.query('BEGIN READ ONLY');
@@ -123,7 +133,12 @@ export async function createRestrictedStagingPool({ rawPool }) {
       const client = await rawPool.connect();
       try {
         await client.query('BEGIN READ ONLY');
+        // Startup validation may have used a different physical connection.
+        // Revalidate before SET ROLE or executing any tenant read function.
+        await verifyConnection(client);
         await client.query('SET LOCAL ROLE growth_starter_reader');
+        const effective = await client.query('SELECT current_user AS role_name');
+        if (effective.rows?.[0]?.role_name !== 'growth_starter_reader') fail();
         await client.query("SET LOCAL statement_timeout = '2000ms'");
         await client.query("SET LOCAL idle_in_transaction_session_timeout = '3000ms'");
         const result = await client.query(sql, args);

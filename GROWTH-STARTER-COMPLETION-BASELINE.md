@@ -77,3 +77,13 @@ Weights are a proposed **release-acceptance** rubric totalling 100, not claimed 
 - [PR #2](https://github.com/sohail654312-gif/codeedge-growth-starter/pull/2) and [PR #6](https://github.com/sohail654312-gif/codeedge-growth-starter/pull/6)
 - [Supabase user sessions](https://supabase.com/docs/guides/auth/sessions), [user management](https://supabase.com/docs/guides/auth/managing-user-data), [Data API security](https://supabase.com/docs/guides/api/securing-your-api)
 - Repository: `docs/FINAL-CODEX-TO-CHATGPT-HANDOFF.md`, `docs/SUPABASE-SESSION-AUTHORITY-FINAL-DECISION.md`, `docs/PHASE3-15R-CUTOVER-EVIDENCE.md`, `docs/REMAINING-EXTERNAL-BLOCKERS.md`
+
+## October 29 security execution — catalog v2 and cancellation hardening
+
+This addendum is on the isolated `review/growth-starter-auth-cutover-hardening-20261029` branch based on draft PR #7, not on `engineering/phase2-core-security`. The read-only database `db/reviews/phase315r_effective_privileges_READ_ONLY.sql` was actually executed on project `dbppeymhsemvghbvuvof` after the change, returning a schema v2 catalog JSON. It confirms the historic `growth_starter_runtime` role has one granted membership edge, still permits old-reader role switching, three old privileged functions remain and private roles/schemas remain absent. This is read-only metadata, **not a leak test**.
+
+The catalog evaluator now explicitly requires current schemaVersion `2` and rejects issuer, gateway, writer and operational owner roles with INHERIT, CREATEROLE, CREATEDB, REPLICATION or any granted-role membership, in addition to prior LOGIN, SUPERUSER and BYPASSRLS guards. This closes an evidence validation gap; it neither creates roles nor claims their real preflight. Replacing this check with a weaker acceptance flag is prohibited.
+
+The exact original-session authority now denies late provider results after an AbortSignal cancellation, and new mock tests cover mid-flight aborts and unknown provider account/policy facts. These are **source safety corrections**, not independently supported provider session authority.
+
+Additional deliverables: `AUTH-AUTHORITY-ACCEPTANCE.md`, `DATABASE-CUTOVER-READINESS.md`, `CLIENT-WORKSPACE-ACCEPTANCE.md`, and `GROWTH-STARTER-NEXT-RELEASE-REPORT.md`. No weighted completion claim has been recalculated; hosted staging and production remain blocked.

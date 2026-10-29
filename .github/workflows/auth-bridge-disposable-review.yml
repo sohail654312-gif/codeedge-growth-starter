@@ -43,4 +43,4 @@ jobs:
       - name: Prove restricted Auth bridge in disposable PostgreSQL 17
         run: node --test --test-concurrency=1 tests/postgres/phase315s-auth-bridge.pg.test.mjs
       - name: Rehearse O-K-M-P restricted PostgreSQL 17 migrations and rollback
-        run: node --test --test-concurrency=1 tests/postgres/*.test.mjs
+        run: find tests/postgres -maxdepth 1 -name '*.test.mjs' ! -name 'phase315s-auth-bridge.pg.test.mjs' -print0 | xargs -0 node --test --test-concurrency=1

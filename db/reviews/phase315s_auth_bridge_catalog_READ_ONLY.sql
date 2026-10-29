@@ -29,7 +29,8 @@ WITH bridge AS (
       AND NOT rolbypassrls AND NOT rolcreaterole AND NOT rolcreatedb
       AND NOT rolreplication FROM checker),false) AS checker_restricted,
   COALESCE((SELECT prosecdef FROM bridge),false) AS security_definer,
-  COALESCE((SELECT 'search_path='=ANY(proconfig) FROM bridge),false) AS empty_search_path,
+  COALESCE((SELECT EXISTS(SELECT 1 FROM unnest(proconfig) AS cfg
+      WHERE cfg IN ('search_path=','search_path=""')) FROM bridge),false) AS empty_search_path,
   COALESCE((SELECT has_schema_privilege(b.proowner,a.schema_oid,'USAGE')
       AND has_table_privilege(b.proowner,a.sessions_oid,'SELECT')
       AND has_table_privilege(b.proowner,a.users_oid,'SELECT')

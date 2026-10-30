@@ -103,10 +103,17 @@ WITH bridge AS (
   NOT EXISTS(SELECT 1 FROM api a CROSS JOIN checker c
       WHERE pg_has_role(a.oid,c.oid,'USAGE') OR pg_has_role(a.oid,c.oid,'SET'))
       AS checker_not_api_reachable,
-  -- NOINHERIT on the checker does not prevent a member role from SET ROLE.
-  -- Until a separately reviewed runtime role is approved, no membership is safe.
-  NOT EXISTS(SELECT 1 FROM pg_auth_members m JOIN checker c ON m.roleid=c.oid)
-      AS checker_has_no_members,
+  -- PostgreSQL 17 gives the vetted creator/owner of a role an ADMIN-only
+  -- membership with neither INHERIT nor SET. Hosted Supabase has this exact
+  -- edge from the bridge owner (postgres) to the checker role. It cannot
+  -- exercise checker privileges; reject any other incoming membership or
+  -- any change enabling SET/INHERIT, even for that owner. No runtime grants.
+  -- pg_has_role(API,checker,'SET'/'USAGE') is independently checked above.
+  NOT EXISTS(SELECT 1 FROM pg_auth_members m JOIN checker c ON m.roleid=c.oid
+      CROSS JOIN bridge b
+      WHERE m.member<>b.proowner OR NOT m.admin_option
+         OR m.inherit_option OR m.set_option)
+      AS checker_no_unsafe_members,
   -- NOINHERIT does not prevent SET ROLE to a parent role. A checker granted
   -- membership in an Auth-reading role could assume its privileges.
   -- No outgoing checker memberships are approved in this review-only design.
@@ -178,7 +185,7 @@ WITH bridge AS (
   ('checker_no_auth_write',f.checker_no_auth_write),
   ('checker_no_auth_sequence_access',f.checker_no_auth_sequence_access),
   ('checker_not_api_reachable',f.checker_not_api_reachable),
-  ('checker_has_no_members',f.checker_has_no_members),
+  ('checker_no_unsafe_members',f.checker_no_unsafe_members),
   ('checker_has_no_parent_roles',f.checker_has_no_parent_roles),
   ('api_no_bridge_access',f.api_no_bridge_access),
   ('schema_acl_restricted',f.schema_acl_restricted),

@@ -63,6 +63,18 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
    assert.equal(report.checksPassed,false,check);
    assert.ok(report.failedChecks.includes(check),JSON.stringify(report.failedChecks));
   }
+  // Supabase Auth contains sensitive relations beyond users and sessions.
+  // Direct and column-level SELECT on a third Auth table must fail the catalog,
+  // even while the checker lacks Auth schema USAGE.
+  await db.query('CREATE TABLE auth.gs315s_auxiliary_private (secret text)');
+  await db.query('GRANT SELECT ON auth.gs315s_auxiliary_private TO growth_starter_session_checker');
+  await expectCatalogFailure('checker_no_raw_auth');
+  await db.query('REVOKE SELECT ON auth.gs315s_auxiliary_private FROM growth_starter_session_checker');
+  await db.query('GRANT SELECT (secret) ON auth.gs315s_auxiliary_private TO growth_starter_session_checker');
+  await expectCatalogFailure('checker_no_raw_auth');
+  await db.query('REVOKE SELECT (secret) ON auth.gs315s_auxiliary_private FROM growth_starter_session_checker');
+  assert.equal((await inspectCatalog()).checksPassed,true,'auxiliary Auth read grants fully revoked');
+  await db.query('DROP TABLE auth.gs315s_auxiliary_private');
   // The checker must not receive Auth write privileges even if it lacks
   // schema USAGE and SELECT. Table-level and column-level grants differ.
   await db.query('GRANT CREATE ON SCHEMA auth TO growth_starter_session_checker');

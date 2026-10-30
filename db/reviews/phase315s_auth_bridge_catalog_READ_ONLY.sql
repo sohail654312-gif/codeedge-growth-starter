@@ -67,6 +67,11 @@ WITH bridge AS (
   -- Until a separately reviewed runtime role is approved, no membership is safe.
   NOT EXISTS(SELECT 1 FROM pg_auth_members m JOIN checker c ON m.roleid=c.oid)
       AS checker_has_no_members,
+  -- NOINHERIT does not prevent SET ROLE to a parent role. A checker granted
+  -- membership in an Auth-reading role could assume its privileges.
+  -- No outgoing checker memberships are approved in this review-only design.
+  NOT EXISTS(SELECT 1 FROM pg_auth_members m JOIN checker c ON m.member=c.oid)
+      AS checker_has_no_parent_roles,
   NOT EXISTS(SELECT 1 FROM api a CROSS JOIN bridge b
       WHERE has_schema_privilege(a.oid,b.schema_oid,'USAGE')
          OR has_function_privilege(a.oid,b.oid,'EXECUTE')) AS api_no_bridge_access,
@@ -132,6 +137,7 @@ WITH bridge AS (
   ('checker_no_raw_auth',f.checker_no_raw_auth),
   ('checker_not_api_reachable',f.checker_not_api_reachable),
   ('checker_has_no_members',f.checker_has_no_members),
+  ('checker_has_no_parent_roles',f.checker_has_no_parent_roles),
   ('api_no_bridge_access',f.api_no_bridge_access),
   ('schema_acl_restricted',f.schema_acl_restricted),
   ('schema_no_external_create',f.schema_no_external_create),

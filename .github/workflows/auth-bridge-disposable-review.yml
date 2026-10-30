@@ -1,0 +1,50 @@
+name: Growth Starter disposable Auth bridge proof
+on:
+  push:
+    branches:
+      - 'review/growth-starter-auth-bridge-disposable-*'
+      - 'review/growth-starter-auth-bridge-orphan-*'
+      - 'review/growth-starter-auth-bridge-checker-membership-*'
+      - 'review/growth-starter-hosted-admin-membership-*'
+    paths:
+      - 'db/drafts/phase315s_exact_auth_bridge_REVIEW_ONLY.sql'
+      - 'db/reviews/phase315s_auth_bridge_catalog_READ_ONLY.sql'
+      - 'tests/postgres/phase315s-auth-bridge.pg.test.mjs'
+      - '.github/workflows/auth-bridge-disposable-review.yml'
+  pull_request:
+    branches:
+      - 'review/growth-starter-auth-cutover-hardening-*'
+permissions:
+  contents: read
+jobs:
+  isolated-auth-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: gs_test
+          POSTGRES_PASSWORD: ephemeral_qa_only
+          POSTGRES_DB: gs_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gs_test -d gs_test"
+          --health-interval 5s --health-timeout 5s --health-retries 8
+    env:
+      TEST_DATABASE_URL: postgres://gs_test:ephemeral_qa_only@127.0.0.1:5432/gs_test
+      GS315S_DISPOSABLE_ONLY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-fund
+      - name: Verify test syntax
+        run: node --check tests/postgres/phase315s-auth-bridge.pg.test.mjs
+      - name: Prove restricted Auth bridge in disposable PostgreSQL 17
+        run: node --test --test-concurrency=1 tests/postgres/phase315s-auth-bridge.pg.test.mjs
+      - name: Rehearse O-K-M-P restricted PostgreSQL 17 migrations and rollback
+        run: find tests/postgres -maxdepth 1 -name '*.test.mjs' ! -name 'phase315s-auth-bridge.pg.test.mjs' -print0 | xargs -0 node --test --test-concurrency=1

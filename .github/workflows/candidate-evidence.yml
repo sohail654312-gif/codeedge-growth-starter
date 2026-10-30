@@ -1,0 +1,36 @@
+name: Growth Starter candidate release evidence
+on:
+  push:
+    branches: [release/growth-starter-candidate-20261030]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  collect-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify the checkout is the triggering candidate commit
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Collect all four exact-commit source gates
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/collect-candidate-evidence.mjs
+      - name: Publish immutable candidate readiness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/growth-starter-candidate-evidence.json
+          if-no-files-found: error
+          retention-days: 30

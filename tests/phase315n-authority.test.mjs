@@ -16,19 +16,22 @@ function restrictedPool(role){
  const functions=role==='gs315m_issuer'
    ? ['begin_login','consume_login','issue_session']
    : ['read_requests','revoke_session','session_context'];
+ const roleRow={actor:role,login:role,rolcanlogin:true,rolinherit:false,
+  rolsuper:false,rolbypassrls:false,rolcreaterole:false,rolcreatedb:false,
+  rolreplication:false,memberships:false,business_schema:false,db_create:false,
+  public_functions:0,safe_owners:3,private_rls:2,accessible_tables:[],
+  executable:functions};
  return {
   calls,
   async query(sql){
    if(!sql.includes('current_user AS actor'))throw Error('Unexpected preflight SQL');
-   return {rows:[{actor:role,login:role,rolcanlogin:true,rolinherit:false,
-    rolsuper:false,rolbypassrls:false,rolcreaterole:false,rolcreatedb:false,
-    rolreplication:false,memberships:false,business_schema:false,db_create:false,
-    public_functions:0,safe_owners:3,private_rls:2,accessible_tables:[],
-    executable:functions}]};
+   return {rows:[roleRow]};
   },
   async connect(){
    return {async query(sql){
     calls.push(sql);
+    // The acquired transaction connection must return its own role catalog.
+    if(sql.includes('current_user AS actor'))return {rows:[roleRow]};
     if(sql.includes('growth_starter_private.session_context'))
      return {rows:[{user_id:OWNER,provider_session_id:SESSION}],rowCount:1};
     if(sql.includes('growth_starter_private.read_requests'))

@@ -6,6 +6,7 @@ import {createPrivateHttpsCookieHandler} from '../backend/phase315e-https-cookie
 import {validateFreshProviderIdentity} from '../backend/phase315d-fresh-login.mjs';
 import {createSupabasePkceHttpAdapter} from '../backend/phase315g-supabase-pkce-adapter.mjs';
 import {readPhase315mConfig,createPhase315mIngress} from '../staging/phase315m-config.mjs';
+import {createPhase315mPrivateRuntime,PRIVATE_RUNTIME_PREFLIGHT} from '../backend/phase315m-private-runtime.mjs';
 const APP='https://clinic.example.invalid',PROJECT='https://fictional-proj.supabase.co';
 const opaque=()=>randomBytes(32).toString('base64url');
 async function request(handler,path,{method='GET',headers={},body='',tls=true}={}){
@@ -91,4 +92,117 @@ test('staging configuration cannot infer owner/reviewer approval or accept broad
  assert.equal(secure({...proxyReq,socket:{remoteAddress:'203.0.113.1'}}),false);
  assert.equal(secure({...proxyReq,headers:{'x-forwarded-proto':'http'}}),false);
  assert.equal(secure({...proxyReq,headers:{...proxyReq.headers,'x-forwarded-host':'attacker.invalid'}}),false);
+});
+
+test('private issuer and gateway preflights reject unknown or ill-typed privilege facts',async()=>{
+ const rowFor=role=>({
+  actor:role,login:role,rolcanlogin:true,rolinherit:false,rolsuper:false,
+  rolbypassrls:false,rolcreaterole:false,rolcreatedb:false,rolreplication:false,
+  memberships:false,business_schema:false,db_create:false,
+  public_functions:0,safe_owners:3,private_rls:2,accessible_tables:[],
+  executable:role==='gs315m_issuer'
+   ?['begin_login','consume_login','issue_session']
+   :['read_requests','revoke_session','session_context']
+ });
+ const issuer=rowFor('gs315m_issuer'),gateway=rowFor('gs315k_gateway');
+ const pool=row=>({
+  query:async()=>({rows:[row]}),
+  connect:async()=>{throw Error('Unexpected database operation in source-only preflight test.');}
+ });
+ const start=(issuerPatch={},gatewayPatch={})=>createPhase315mPrivateRuntime({
+  issuerPool:pool({...issuer,...issuerPatch}),
+  gatewayPool:pool({...gateway,...gatewayPatch}),
+  provider:{sendLoginEmail:async()=>{},exchangeAuthCode:async()=>{},verifyUser:async()=>{}},
+  projectUrl:PROJECT+'/',appOrigin:APP+'/',csrfSigningKey:randomBytes(32),
+  checkProviderSession:async()=>({active:false})
+ });
+ const accepted=await start();
+ assert.equal(accepted.status,'restricted_source_runtime_hosted_acceptance_pending');
+ assert.equal((await accepted.ready()).releaseReady,false);
+ const forbidden=['rolinherit','rolsuper','rolbypassrls','rolcreaterole',
+  'rolcreatedb','rolreplication','memberships','business_schema','db_create'];
+ for(const key of forbidden){
+  for(const value of [undefined,null,'false']){
+   await assert.rejects(start({[key]:value}),/unavailable/,key+' issuer');
+   await assert.rejects(start({}, {[key]:value}),/unavailable/,key+' gateway');
+  }
+ }
+ for(const value of [undefined,null,'true',1]){
+  await assert.rejects(start({rolcanlogin:value}),/unavailable/,'issuer LOGIN');
+  await assert.rejects(start({}, {rolcanlogin:value}),/unavailable/,'gateway LOGIN');
+ }
+});
+
+test('every acquired issuer/gateway pool connection is rechecked before private SQL effects',async()=>{
+ const safe=role=>({
+  actor:role,login:role,rolcanlogin:true,rolinherit:false,rolsuper:false,
+  rolbypassrls:false,rolcreaterole:false,rolcreatedb:false,rolreplication:false,
+  memberships:false,business_schema:false,db_create:false,
+  public_functions:0,safe_owners:3,private_rls:2,accessible_tables:[],
+  executable:role==='gs315m_issuer'
+   ?['begin_login','consume_login','issue_session']
+   :['read_requests','revoke_session','session_context']
+ });
+ const makePool=(role,drift={})=>{
+  const calls=[];
+  return {
+   calls,
+   // Startup/readiness can use a different physical connection from a transaction.
+   query:async(sql)=>{
+    assert.equal(sql,PRIVATE_RUNTIME_PREFLIGHT);
+    return {rows:[safe(role)]};
+   },
+   connect:async()=>({
+    query:async(sql)=>{
+     calls.push(sql);
+     if(sql===PRIVATE_RUNTIME_PREFLIGHT)return {rows:[{...safe(role),...drift}]};
+     if(sql.startsWith('SELECT growth_starter_private.'))
+      return {rows:[{revoked:true}],rowCount:1};
+     return {rows:[]};
+    },
+    release(){}
+   })
+  };
+ };
+ const makeRuntime=async(issuerDrift={},gatewayDrift={})=>{
+  const issuer=makePool('gs315m_issuer',issuerDrift);
+  const gateway=makePool('gs315k_gateway',gatewayDrift);
+  let emails=0;
+  const runtime=await createPhase315mPrivateRuntime({
+   issuerPool:issuer,gatewayPool:gateway,
+   provider:{sendLoginEmail:async()=>{emails++;},
+    exchangeAuthCode:async()=>{},verifyUser:async()=>{}},
+   projectUrl:PROJECT+'/',appOrigin:APP+'/',csrfSigningKey:randomBytes(32),
+   checkProviderSession:async()=>({active:false})
+  });
+  return {runtime,issuer,gateway,get emails(){return emails;}};
+ };
+ for(const drift of [
+  {actor:'postgres',login:'postgres'},
+  {rolsuper:true},{memberships:undefined},{db_create:'false'},
+  {accessible_tables:['auth.sessions']},{executable:['issue_session']},
+  {public_functions:null}
+ ]){
+  const issuer=await makeRuntime(drift);
+  await assert.rejects(issuer.runtime.bridge.begin({email:'a@invalid.example'}),/unavailable/);
+  assert.equal(issuer.emails,0,'no provider email after a rejected issuer connection');
+  assert.equal(issuer.issuer.calls.filter(sql=>sql.startsWith('SELECT growth_starter_private.')).length,0,
+   'no private issuer SQL after failed connection preflight');
+  assert.ok(issuer.issuer.calls.includes(PRIVATE_RUNTIME_PREFLIGHT));
+  const gateway=await makeRuntime({},drift);
+  await assert.rejects(gateway.runtime.authority.revoke({
+   token:'ce1.'+randomUUID()+'.'+opaque()
+  }),/unavailable/);
+  assert.equal(gateway.gateway.calls.filter(sql=>sql.startsWith('SELECT growth_starter_private.')).length,0,
+   'no private gateway SQL after failed connection preflight');
+  assert.ok(gateway.gateway.calls.includes(PRIVATE_RUNTIME_PREFLIGHT));
+ }
+ const ok=await makeRuntime();
+ await ok.runtime.bridge.begin({email:'a@invalid.example'});
+ assert.equal(ok.emails,1);
+ assert.equal(ok.issuer.calls.filter(sql=>sql===PRIVATE_RUNTIME_PREFLIGHT).length,1);
+ assert.equal((await ok.runtime.authority.revoke({
+  token:'ce1.'+randomUUID()+'.'+opaque()
+ })).revoked,true);
+ assert.equal(ok.gateway.calls.filter(sql=>sql===PRIVATE_RUNTIME_PREFLIGHT).length,1);
 });

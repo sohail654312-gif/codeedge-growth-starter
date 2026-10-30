@@ -1,3 +1,5 @@
+> Historical phase-by-phase record. For the consolidated source scope and current evidence rules, read [the 30 October 2026 release candidate handoff](RELEASE-CANDIDATE.md). Statements below describe their dated phase; they are not a current hosted acceptance certificate.
+
 # Security and privacy boundaries
 
 Status: controlled preview; **NOT approved for production patient or confidential customer information**.

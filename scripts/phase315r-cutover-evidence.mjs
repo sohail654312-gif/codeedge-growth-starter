@@ -14,21 +14,32 @@ function evaluateCutoverEvidence(snapshot) {
   checks.push({id,severity:level,status:passed===true?'PASS':'BLOCKED',description,
    requiredAction:passed===true?null:requiredAction});
  };
- const expected=isObject(snapshot)&&snapshot.schemaVersion===1&&
+ const expected=isObject(snapshot)&&snapshot.schemaVersion===2&&
   snapshot.snapshotKind==='growth_starter_privilege_cutover_catalog'&&isObject(snapshot.roles);
  if(!expected){
   check('snapshot_integrity','HIGH',false,'Versioned read-only privilege snapshot is missing or malformed.',
    'Obtain the authorized read-only SQL snapshot from staging; do not fabricate or substitute another database.');
  } else {
   const r=snapshot.roles,proper=(name,login)=>{
-   const role=r[name];return isObject(role)&&role.login===login&&role.super===false&&role.bypassRls===false;
+   const role=r[name];return isObject(role)&&role.login===login&&role.super===false&&role.bypassRls===false&&
+     role.inherit===false&&role.createDb===false&&role.createRole===false&&
+     role.replication===false&&role.grantedRoles===0;
   };
   const inert=name=>r[name]===undefined||proper(name,false);
   check('writer_identity','HIGH',proper('gs315p_writer',true),
-   'Approved writer must be LOGIN, non-superuser and non-BYPASSRLS.',
+   'Writer must be LOGIN with no superuser, BYPASSRLS, inherited privileges, elevated role/database rights or granted roles.',
    'Approve and provision the separately reviewed restricted writer only after cutover prerequisites.');
+  // All three isolated private runtime pools are required. Previously a
+  // plausible writer-only snapshot could be labelled catalog-consistent even
+  // with no issuer or authenticated gateway installed.
+  check('issuer_identity','HIGH',proper('gs315m_issuer',true),
+   'Private issuer must be LOGIN without superuser, BYPASSRLS, inherited privileges, elevated rights or granted roles.',
+   'Provision and preflight the reviewed private issuer during approved cutover.');
+  check('gateway_identity','HIGH',proper('gs315k_gateway',true),
+   'Private gateway must be LOGIN without superuser, BYPASSRLS, inherited privileges, elevated rights or granted roles.',
+   'Provision and preflight the reviewed private gateway during approved cutover.');
   check('writer_owner','HIGH',proper('gs315p_ops_owner',false),
-   'Operational function owner must be NOLOGIN, non-superuser and non-BYPASSRLS.',
+   'Operational function owner must be NOLOGIN without inherited or elevated privileges or granted roles.',
    'Apply reviewed private owner functions and verify its effective catalog permissions.');
   check('legacy_reader_inert','HIGH',inert('growth_starter_reader')&&inert('growth_starter_runtime'),
    'Historical reader/runtime accounts must be absent or NOLOGIN and non-bypass.',
@@ -77,7 +88,7 @@ function evaluateCutoverEvidence(snapshot) {
   'Real authorized fictional PKCE identities, cross-tenant and logout/admin revocation tests',
   'Owner approval of exact staging change set and independent production release acceptance',
  ].map(description=>({description,status:'UNVERIFIED'}));
- return {schemaVersion:1,phase:'3.15R',reportKind:'unattested_privilege_catalog_only',
+ return {schemaVersion:2,phase:'3.15R',reportKind:'unattested_privilege_catalog_only',
   catalog:{status:expected?(blocked.length?'BLOCKED':'MATCHES_EXPECTED_VALUES_UNATTESTED'):'BLOCKED',
    passedChecks:checks.length-blocked.length,blockedChecks:blocked.map(x=>x.id),checks},
   external:{status:'UNVERIFIED',gates:external},

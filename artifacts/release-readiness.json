@@ -1,4 +1,10 @@
 {
+  "historicalOnly": true,
+  "currentEvidence": {
+    "branch": "release/growth-starter-candidate-20261030",
+    "workflow": ".github/workflows/candidate-evidence.yml",
+    "location": "GitHub Actions exact-commit artifact; this stored snapshot does not certify the candidate"
+  },
   "schemaVersion": 1,
   "generatedAt": "2026-10-14T16:47:49.107Z",
   "repository": "sohail654312-gif/codeedge-growth-starter",

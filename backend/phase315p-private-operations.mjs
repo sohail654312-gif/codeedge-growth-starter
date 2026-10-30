@@ -109,6 +109,9 @@ export async function createPrivateWorkspaceOperations({pool,checkProviderSessio
    c=await pool.connect();await c.query('BEGIN ISOLATION LEVEL READ COMMITTED');started=true;
    await c.query("SET LOCAL statement_timeout='4s'");await c.query("SET LOCAL lock_timeout='2s'");
    await c.query("SET LOCAL idle_in_transaction_session_timeout='6s'");
+   // A startup pool.query() may use a different physical connection. Fail closed
+   // on the actual transaction connection before reading a session or writing.
+   verifyWriterCatalog((await c.query(WRITER_PREFLIGHT)).rows?.[0]);
    const context=(await c.query('SELECT * FROM growth_starter_private.session_context($1)',[token])).rows?.[0];
    if(!context)throw new DomainError('Sign in to continue.',401);
    sessionVerified=true;

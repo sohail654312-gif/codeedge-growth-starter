@@ -269,7 +269,7 @@ export function runOfflineGrowthReport({business:input,pages:fixtures,workspaceI
 export function exportKeywordCsv(report){
  assert(report?.version==='growth-starter.seo-report.v1','Valid report required.');
  const header=['keyword','area','intent','cluster','target_page','mapping','confidence','source','search_volume','difficulty','cpc','rank','status'];
- const csv=cell=>{const text=String(cell??'Not available');const safe=/^[=+\-@\t\r]/.test(text)?"'"+text:text;return '"'+safe.replace(/"/g,'""')+'"';};
+ const csv=cell=>{const text=String(cell??'Not available');const safe=/^\s*[=+\-@\t\r\n]/.test(text)?"'"+text:text;return '"'+safe.replace(/"/g,'""')+'"';};
  const rows=report.keywords.map(k=>[k.phrase,k.geography,k.intent,k.cluster,k.targetPage,k.mapping,k.confidence,k.provenance.source,
    k.metrics.searchVolume,k.metrics.keywordDifficulty,k.metrics.cpc,k.metrics.ranking,k.status]);
  return [header,...rows].map(x=>x.map(csv).join(',')).join('\r\n');

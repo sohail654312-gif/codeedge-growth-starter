@@ -1,3 +1,5 @@
+> Historical phase-by-phase record. For the consolidated source scope and current evidence rules, read [the 30 October 2026 release candidate handoff](RELEASE-CANDIDATE.md). Statements below describe their dated phase; they are not a current hosted acceptance certificate.
+
 # Fresh security audit
 
 Date: 2026-10-14. Scope: current engineering source, read-only staging metadata,

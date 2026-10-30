@@ -1,17 +1,14 @@
-# Minimal Codeedge agency + client journey
+# Agency and client workflow — source candidate
 
-**Current delivery stage: transition core only.** UX and trust provisioning remain incomplete.
+Current source status is described in [the release candidate handoff](RELEASE-CANDIDATE.md). Hosted and production acceptance remain blocked.
 
-1. **Codeedge agency** initiates an onboarding request; verified authorization and workspace creation must occur server-side after independent security acceptance.
-2. **Invitation** is emailed or shared securely to a verified recipient with limited validity, atomic claim, one-time use and revocation. NOT ENABLED in this branch.
-3. **Client** signs in and sees only their assigned workspace; supplies approved business name, goals, public website and contact/enquiry metadata. Avoid clinical/medical details.
-4. **Media uploads** currently accept PNG/JPEG/WebP through small JSON/base64 with backend signature checks (≤3 MiB). Larger photos/videos require signed multipart upload design and a content-scan/consent lifecycle.
-5. **Agency staff** can move a request from Requested → In progress → Awaiting approval; the appropriate client or owner may choose Approved or Changes requested; an Approved request can move to Completed. Tested in mock API, **not wired into separate agency/client UI**.
-6. **Published results** must only be displayed after a provider adapter delivers trusted publication evidence. There is no Published state writable by this branch.
-7. **Enquiry totals** must come from persisted workspace records; external marketing/revenue figures remain unconnected and must not be implied as real.
+1. An approved existing identity follows the PKCE email flow. The separately accepted exact-session authority is mandatory.
+2. The private application discovers authorized workspaces, or creates the authenticated owner's workspace through a fixed-purpose operation. Discovery currently stops at 25.
+3. The user saves a business profile and creates a work request. Transactions bind the current session, workspace and role to the change.
+4. Owner/agency admin can assign authorized staff and a due date. The present UI requires the member ID.
+5. Owner/agency/staff can progress Requested → In progress → Awaiting approval. Owner/client can approve the reviewed version or request corrections. Approved work can move to Completed.
+6. Authorized users inspect request details; owner/admin can view activity. Reports count the loaded page and do not claim workspace-wide growth metrics.
+7. Owner access revocation and media-deletion queueing exist. Live provider invitations and uploads remain disabled pending accepted identity/storage contracts.
+8. Growth tools use fictional examples or user-supplied offline extracts. No connected Google analytics, publishing, payment or distributed automation is activated.
 
-## UX intent
-- Client: Website, Social Media, SEO/AEO, Enquiries, Requests, Media, Progress; few fields per screen.
-- Codeedge agency: client switcher with explicit role, assigned work queue, media review, evidence, approvals and audit events.
-- Default to accessible and mobile-first; keep the existing navy-white theme. No Business OS feature overload.
-- All state-changing operations must surface loading/errors and maintain strict empty/demo labeling.
+Synthetic browser/database journeys validate source behavior. They do not certify live provider revocation, real email delivery, hosted cross-tenant isolation or storage erasure. The older AppDeploy preview has separate enquiry and upload behavior and is not the newer private runtime.

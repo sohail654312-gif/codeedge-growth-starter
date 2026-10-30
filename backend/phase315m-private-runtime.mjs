@@ -39,19 +39,27 @@ export const PRIVATE_RUNTIME_PREFLIGHT=`SELECT current_user AS actor,session_use
 
 async function preflight(pool,role,functions){
  const row=(await pool.query(PRIVATE_RUNTIME_PREFLIGHT)).rows?.[0];
- if(!row||row.actor!==role||row.login!==role||!row.rolcanlogin||row.rolinherit||row.rolsuper||
- row.rolbypassrls||row.rolcreaterole||row.rolcreatedb||row.rolreplication||row.memberships||
- row.business_schema||row.db_create||row.public_functions!==0||row.safe_owners!==3||row.private_rls!==2||
- !Array.isArray(row.accessible_tables)||row.accessible_tables.length||
- JSON.stringify(row.executable)!==JSON.stringify([...functions].sort()))unavailable();
+ // A missing or null PostgreSQL privilege flag is UNKNOWN, not false.
+ // Every forbidden privilege must be explicitly false for both LOGIN pools.
+ const forbidden=['rolinherit','rolsuper','rolbypassrls','rolcreaterole',
+  'rolcreatedb','rolreplication','memberships','business_schema','db_create'];
+ if(!row||row.actor!==role||row.login!==role||row.rolcanlogin!==true||
+  forbidden.some(key=>row[key]!==false)||
+  row.public_functions!==0||row.safe_owners!==3||row.private_rls!==2||
+  !Array.isArray(row.accessible_tables)||row.accessible_tables.length||
+  JSON.stringify(row.executable)!==JSON.stringify([...functions].sort()))unavailable();
 }
-async function transaction(pool,run){
+async function transaction(pool,role,functions,run){
  let c,open=false;
  try{
   c=await pool.connect();await c.query('BEGIN ISOLATION LEVEL READ COMMITTED');open=true;
   await c.query("SET LOCAL statement_timeout='4000ms'");
   await c.query("SET LOCAL lock_timeout='2000ms'");
   await c.query("SET LOCAL idle_in_transaction_session_timeout='6000ms'");
+  // Pool-level startup checks cannot authorize a different acquired connection.
+  // Validate the effective principal and grants on THIS connection before any
+  // login, session or workspace operation executes inside its transaction.
+  await preflight(c,role,functions);
   const result=await run(c);await c.query('COMMIT');open=false;return result;
  }catch(e){
   if(open)await c.query('ROLLBACK').catch(()=>{});
@@ -92,7 +100,7 @@ export async function createPhase315mPrivateRuntime({issuerPool,gatewayPool,prov
    if(typeof email!=='string'||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))denied();
    const canonical=email.toLowerCase(),state=random(),binding=random(),verifier=random(),grant=random();
    const codeChallenge=createHash('sha256').update(verifier).digest('base64url');
-   await transaction(issuerPool,c=>c.query('SELECT growth_starter_private.begin_login($1,$2,$3,$4,$5)',
+   await transaction(issuerPool,'gs315m_issuer',['begin_login','consume_login','issue_session'],c=>c.query('SELECT growth_starter_private.begin_login($1,$2,$3,$4,$5)',
     [hash('state',state),hash('binding',binding),verifier,grant,hash('email',canonical)]));
    // The verifier stays in the restricted database. No response carries a
    // provider bearer, refresh token, verifier or one-time issuance grant.
@@ -101,7 +109,7 @@ export async function createPhase315mPrivateRuntime({issuerPool,gatewayPool,prov
   },
   async completeAndIssue({state,browserBinding,authCode}={}){
    if(!OPAQUE.test(state||'')||!OPAQUE.test(browserBinding||'')||!CODE.test(authCode||''))denied();
-   const flow=await transaction(issuerPool,async c=>{
+   const flow=await transaction(issuerPool,'gs315m_issuer',['begin_login','consume_login','issue_session'],async c=>{
     const r=await c.query('SELECT * FROM growth_starter_private.consume_login($1,$2)',
      [hash('state',state),hash('binding',browserBinding)]);
     if(r.rowCount!==1)denied();return r.rows[0];
@@ -115,7 +123,7 @@ export async function createPhase315mPrivateRuntime({issuerPool,gatewayPool,prov
    if(hash('email',identity.email)!==flow.email_sha256)denied();
    await providerActive(identity.userId,identity.providerSessionId);
    const id=randomUUID(),secret=random(),expiresAt=new Date(Math.min(now()+900000,identity.expiresAt*1000));
-   await transaction(issuerPool,c=>c.query(
+   await transaction(issuerPool,'gs315m_issuer',['begin_login','consume_login','issue_session'],c=>c.query(
     'SELECT growth_starter_private.issue_session($1,$2,$3,$4,$5,$6,$7)',
     [flow.one_time_grant_id,flow.email_sha256,identity.userId,identity.providerSessionId,id,
      sessionHash(id,secret),expiresAt]));
@@ -125,7 +133,7 @@ export async function createPhase315mPrivateRuntime({issuerPool,gatewayPool,prov
  const authority=Object.freeze({
   async withAuthorizedRead({token,workspaceId}={},operation){
    if(!TOKEN.test(token||'')||!WS.test(workspaceId||'')||typeof operation!=='function')denied();
-   return transaction(gatewayPool,async c=>{
+   return transaction(gatewayPool,'gs315k_gateway',['read_requests','revoke_session','session_context'],async c=>{
     const context=(await c.query('SELECT * FROM growth_starter_private.session_context($1)',[token])).rows?.[0];
     if(!context)denied();await providerActive(context.user_id,context.provider_session_id);
     let active=true;
@@ -138,7 +146,7 @@ export async function createPhase315mPrivateRuntime({issuerPool,gatewayPool,prov
   },
   async revoke({token}={}){
    if(!TOKEN.test(token||''))denied();
-   return transaction(gatewayPool,async c=>{
+   return transaction(gatewayPool,'gs315k_gateway',['read_requests','revoke_session','session_context'],async c=>{
     const r=await c.query('SELECT growth_starter_private.revoke_session($1) AS revoked',[token]);
     if(r.rows?.[0]?.revoked!==true)denied();return Object.freeze({revoked:true});
    });

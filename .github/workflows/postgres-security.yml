@@ -1,7 +1,7 @@
 name: Growth Starter disposable PostgreSQL security
 on:
   push:
-    branches: [engineering/phase2-core-security]
+    branches: [engineering/phase2-core-security, release/growth-starter-candidate-20261030]
   pull_request:
     branches: [main]
 permissions:
@@ -37,8 +37,12 @@ jobs:
           node --check backend/verified-identity.mjs
           node --check backend/media-gate.mjs
           node --check backend/image-inspector.mjs
+      - name: Restricted Auth bridge with synthetic Auth tables
+        env:
+          GS315S_DISPOSABLE_ONLY: '1'
+        run: node --test --test-concurrency=1 tests/postgres/phase315s-auth-bridge.pg.test.mjs
       - name: Real database transactions and signed synthetic HTTP sessions
-        run: node --test --test-concurrency=1 tests/postgres/*.test.mjs
+        run: find tests/postgres -maxdepth 1 -name '*.test.mjs' ! -name 'phase315s-auth-bridge.pg.test.mjs' -print0 | xargs -0 node --test --test-concurrency=1
       - name: Save reproducible PostgreSQL query measurements
         if: always()
         uses: actions/upload-artifact@v4

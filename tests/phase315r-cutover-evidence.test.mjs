@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import {evaluateCutoverEvidence} from '../scripts/phase315r-cutover-evidence.mjs';
 
 const safe=()=>({
- schemaVersion:1,snapshotKind:'growth_starter_privilege_cutover_catalog',
- roles:{gs315p_writer:{login:true,super:false,bypassRls:false},
- gs315p_ops_owner:{login:false,super:false,bypassRls:false},
- growth_starter_session_checker:{login:false,super:false,bypassRls:false}},
+ schemaVersion:2,snapshotKind:'growth_starter_privilege_cutover_catalog',
+ roles:{gs315m_issuer:{login:true,super:false,bypassRls:false,inherit:false,createDb:false,createRole:false,replication:false,grantedRoles:0},
+ gs315k_gateway:{login:true,super:false,bypassRls:false,inherit:false,createDb:false,createRole:false,replication:false,grantedRoles:0},
+ gs315p_writer:{login:true,super:false,bypassRls:false,inherit:false,createDb:false,createRole:false,replication:false,grantedRoles:0},
+ gs315p_ops_owner:{login:false,super:false,bypassRls:false,inherit:false,createDb:false,createRole:false,replication:false,grantedRoles:0},
+ growth_starter_session_checker:{login:false,super:false,bypassRls:false,inherit:false,createDb:false,createRole:false,replication:false,grantedRoles:0}},
  legacyDefiners:0,legacyReaderExecutables:0,legacyAuthenticatedExecutables:0,
  legacyPublicExecutables:0,oldSetRole:false,authenticatedColumnSelects:0,
  authenticatedSchemaUsage:false,anonSchemaUsage:false,
@@ -25,9 +27,9 @@ test('plausible safe catalog never satisfies hosted provider or deployment accep
  assert.equal(r.finalVerdict,'BLOCKED');assert.ok(r.external.gates.every(g=>g.status==='UNVERIFIED'));
 });
 test('current historical live baseline rejects reader edge, definers and direct authenticated grants',()=>{
- const x=safe();x.roles={growth_starter_reader:{login:false,super:false,bypassRls:false},
- growth_starter_runtime:{login:false,super:false,bypassRls:false},
- growth_starter_session_checker:{login:false,super:false,bypassRls:false}};
+ const x=safe();x.roles={growth_starter_reader:{login:false,super:false,bypassRls:false,inherit:false,createDb:false,createRole:false,replication:false,grantedRoles:0},
+ growth_starter_runtime:{login:false,super:false,bypassRls:false,inherit:false,createDb:false,createRole:false,replication:false,grantedRoles:0},
+ growth_starter_session_checker:{login:false,super:false,bypassRls:false,inherit:false,createDb:false,createRole:false,replication:false,grantedRoles:0}};
  Object.assign(x,{legacyDefiners:3,legacyReaderExecutables:3,oldSetRole:true,
  authenticatedColumnSelects:15,authenticatedSchemaUsage:true,privateTableCount:0,
  anonPrivateSchemaUsage:null,authenticatedPrivateSchemaUsage:null,
@@ -67,8 +69,47 @@ test('missing counts, misleading strings, partial private RLS never pass',()=>{
   assert.equal(find(r,id).status,'BLOCKED',id);
 });
 test('existing legacy roles can remain only when inert',()=>{
- const x=safe();x.roles.growth_starter_runtime={login:true,super:false,bypassRls:false};
+ const x=safe();x.roles.growth_starter_runtime={login:true,super:false,bypassRls:false,inherit:false,createDb:false,createRole:false,replication:false,grantedRoles:0};
  assert.equal(find(report(x),'legacy_reader_inert').status,'BLOCKED');
  x.roles.growth_starter_runtime.login=false;
  assert.equal(find(report(x),'legacy_reader_inert').status,'PASS');
+});
+
+test('missing or privileged private issuer and gateway cannot pass catalog review',()=>{
+ for(const roleName of ['gs315m_issuer','gs315k_gateway']){
+  const id=roleName==='gs315m_issuer'?'issuer_identity':'gateway_identity';
+  const missing=safe();delete missing.roles[roleName];
+  assert.equal(find(report(missing),id).status,'BLOCKED');
+  assert.equal(report(missing).catalog.status,'BLOCKED');
+  for(const [field,value] of [['login',false],['super',true],['bypassRls',true]]){
+   const drift=safe();drift.roles[roleName][field]=value;
+   assert.equal(find(report(drift),id).status,'BLOCKED',roleName+':'+field);
+  }
+  assert.equal(find(report(safe()),id).status,'PASS');
+ }
+});
+
+test('catalog schema v1 cannot masquerade as v2 role-privilege verification',()=>{
+ const x=safe();x.schemaVersion=1;
+ assert.equal(report(x).catalog.status,'BLOCKED');
+ assert.equal(find(report(x),'snapshot_integrity').status,'BLOCKED');
+});
+test('effective inherited and escalated role privileges fail closed for all private roles',()=>{
+ for(const roleName of ['gs315m_issuer','gs315k_gateway','gs315p_writer','gs315p_ops_owner']){
+  const id=roleName==='gs315m_issuer'?'issuer_identity':roleName==='gs315k_gateway'?'gateway_identity':roleName==='gs315p_writer'?'writer_identity':'writer_owner';
+  for(const [field,value] of [['inherit',true],['createDb',true],['createRole',true],['replication',true],['grantedRoles',1],['grantedRoles','0']]){
+   const x=safe();x.roles[roleName][field]=value;
+   assert.equal(find(report(x),id).status,'BLOCKED',roleName+':'+field);
+  }
+  for(const field of ['inherit','createDb','createRole','replication','grantedRoles']){
+   const x=safe();delete x.roles[roleName][field];
+   assert.equal(find(report(x),id).status,'BLOCKED',roleName+':missing '+field);
+  }
+ }
+});
+test('inert old checker cannot retain role membership or inherited privileges',()=>{
+ for(const [key,value] of [['grantedRoles',1],['inherit',true],['createRole',true]]){
+  const x=safe();x.roles.growth_starter_session_checker[key]=value;
+  assert.equal(find(report(x),'checker_inert').status,'BLOCKED');
+ }
 });

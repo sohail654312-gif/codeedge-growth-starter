@@ -72,15 +72,22 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   await db.query('REVOKE growth_starter_session_checker FROM gs315s_untrusted');
   // A NOINHERIT checker can still SET ROLE to a granted parent. In this
   // disposable example that parent has direct access to synthetic Auth users.
+  await db.query('GRANT USAGE ON SCHEMA auth TO gs315s_untrusted');
   await db.query('GRANT SELECT ON auth.users TO gs315s_untrusted');
   await db.query('GRANT gs315s_untrusted TO growth_starter_session_checker');
   const parentAccess=(await db.query("SELECT pg_has_role('growth_starter_session_checker','gs315s_untrusted','SET') AS can_set, "+
    "has_table_privilege('growth_starter_session_checker','auth.users','SELECT') AS inherited_select")).rows[0];
   assert.equal(parentAccess.can_set,true,'checker can assume Auth-reading parent despite NOINHERIT');
   assert.equal(parentAccess.inherited_select,false,'the pre-existing direct SELECT guard alone misses SET ROLE');
+  await db.query('SET ROLE gs315s_untrusted');
+  try{
+   const visible=(await db.query('SELECT count(*)::integer AS total FROM auth.users')).rows[0];
+   assert.equal(visible.total,2,'the parent can read synthetic Auth users');
+  }finally{await db.query('RESET ROLE');}
   await expectCatalogFailure('checker_has_no_parent_roles');
   await db.query('REVOKE gs315s_untrusted FROM growth_starter_session_checker');
   await db.query('REVOKE SELECT ON auth.users FROM gs315s_untrusted');
+  await db.query('REVOKE USAGE ON SCHEMA auth FROM gs315s_untrusted');
   // A non-API member of the SECURITY DEFINER function owner can SET ROLE
   // into that owner. This must be rejected even without any direct bridge ACL.
   await db.query('GRANT gs_test TO gs315s_untrusted');

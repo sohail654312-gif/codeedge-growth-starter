@@ -63,6 +63,18 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
    assert.equal(report.checksPassed,false,check);
    assert.ok(report.failedChecks.includes(check),JSON.stringify(report.failedChecks));
   }
+  // The checker must not receive Auth write privileges even if it lacks
+  // schema USAGE and SELECT. Table-level and column-level grants differ.
+  await db.query('GRANT CREATE ON SCHEMA auth TO growth_starter_session_checker');
+  await expectCatalogFailure('checker_no_auth_write');
+  await db.query('REVOKE CREATE ON SCHEMA auth FROM growth_starter_session_checker');
+  await db.query('GRANT INSERT ON auth.sessions TO growth_starter_session_checker');
+  await expectCatalogFailure('checker_no_auth_write');
+  await db.query('REVOKE INSERT ON auth.sessions FROM growth_starter_session_checker');
+  await db.query('GRANT UPDATE (id) ON auth.users TO growth_starter_session_checker');
+  await expectCatalogFailure('checker_no_auth_write');
+  await db.query('REVOKE UPDATE (id) ON auth.users FROM growth_starter_session_checker');
+  assert.equal((await inspectCatalog()).checksPassed,true,'Auth write grants must be fully revoked');
   // NOINHERIT on the checker does not prevent an unrelated member from SET ROLE.
   // Even without direct ACL grants, that member can assume the checker authority.
   await db.query('GRANT growth_starter_session_checker TO gs315s_untrusted');

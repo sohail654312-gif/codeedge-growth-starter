@@ -52,13 +52,18 @@ WITH bridge AS (
   COALESCE((SELECT has_schema_privilege(c.oid,b.schema_oid,'USAGE')
       AND has_function_privilege(c.oid,b.oid,'EXECUTE')
       FROM checker c CROSS JOIN bridge b),false) AS checker_has_narrow_access,
+  -- Managed Auth can contain sensitive relations beyond users and sessions.
+  -- Fail closed on direct table- or column-level SELECT across the entire Auth
+  -- namespace, even if the checker currently lacks schema USAGE.
   COALESCE((SELECT NOT has_schema_privilege(c.oid,a.schema_oid,'USAGE')
-      AND NOT has_table_privilege(c.oid,a.sessions_oid,'SELECT')
-      AND NOT has_table_privilege(c.oid,a.users_oid,'SELECT')
-      AND NOT EXISTS(SELECT 1 FROM pg_attribute col
-          WHERE col.attrelid IN (a.sessions_oid,a.users_oid)
-            AND col.attnum>0 AND NOT col.attisdropped
-            AND has_column_privilege(c.oid,col.attrelid,col.attnum,'SELECT'))
+      AND NOT EXISTS(SELECT 1 FROM pg_class rel
+          WHERE rel.relnamespace=a.schema_oid
+            AND rel.relkind IN ('r','p','v','f','m')
+            AND (has_table_privilege(c.oid,rel.oid,'SELECT')
+              OR EXISTS(SELECT 1 FROM pg_attribute col
+                  WHERE col.attrelid=rel.oid
+                    AND col.attnum>0 AND NOT col.attisdropped
+                    AND has_column_privilege(c.oid,rel.oid,col.attnum,'SELECT'))))
       FROM checker c CROSS JOIN auth_objs a),false) AS checker_no_raw_auth,
   -- NOLOGIN/NOINHERIT and denial of SELECT do not prohibit direct Auth writes.
   -- Fail closed on Auth namespace CREATE, relation DML/DDL privileges, and

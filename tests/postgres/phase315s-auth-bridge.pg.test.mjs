@@ -63,6 +63,24 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
    assert.equal(report.checksPassed,false,check);
    assert.ok(report.failedChecks.includes(check),JSON.stringify(report.failedChecks));
   }
+  // Hosted PG17 exposes the role creator's ADMIN-only membership to the
+  // checker (SET=false, INHERIT=false). This is not a runnable membership.
+  // Simulate that exact edge in disposable PostgreSQL, then prove a privilege
+  // drift to SET/INHERIT fails closed even when it belongs to the owner.
+  await db.query('GRANT growth_starter_session_checker TO gs_test WITH ADMIN TRUE, INHERIT FALSE, SET FALSE');
+  const ownerEdge=(await db.query("SELECT m.admin_option,m.inherit_option,m.set_option FROM pg_auth_members m JOIN pg_roles r ON r.oid=m.roleid JOIN pg_roles member ON member.oid=m.member WHERE r.rolname='growth_starter_session_checker' AND member.rolname='gs_test'")).rows;
+  assert.deepEqual(ownerEdge,[{admin_option:true,inherit_option:false,set_option:false}]);
+  assert.equal((await inspectCatalog()).checksPassed,true,'vetted creator ADMIN-only edge is safe');
+  await db.query('GRANT growth_starter_session_checker TO gs_test WITH SET TRUE');
+  await expectCatalogFailure('checker_no_unsafe_members');
+  await db.query('GRANT growth_starter_session_checker TO gs_test WITH SET FALSE');
+  assert.equal((await inspectCatalog()).checksPassed,true,'SET drift reverted');
+  await db.query('GRANT growth_starter_session_checker TO gs_test WITH INHERIT TRUE');
+  await expectCatalogFailure('checker_no_unsafe_members');
+  await db.query('GRANT growth_starter_session_checker TO gs_test WITH INHERIT FALSE');
+  assert.equal((await inspectCatalog()).checksPassed,true,'INHERIT drift reverted');
+  await db.query('REVOKE growth_starter_session_checker FROM gs_test');
+  assert.equal((await inspectCatalog()).checksPassed,true,'synthetic creator edge removed');
   // Supabase Auth contains sensitive relations beyond users and sessions.
   // Direct and column-level SELECT on a third Auth table must fail the catalog,
   // even while the checker lacks Auth schema USAGE.
@@ -104,7 +122,7 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   // NOINHERIT on the checker does not prevent an unrelated member from SET ROLE.
   // Even without direct ACL grants, that member can assume the checker authority.
   await db.query('GRANT growth_starter_session_checker TO gs315s_untrusted');
-  await expectCatalogFailure('checker_has_no_members');
+  await expectCatalogFailure('checker_no_unsafe_members');
   const membership=(await db.query("SELECT pg_has_role('gs315s_untrusted','growth_starter_session_checker','SET') AS can_set")).rows[0];
   assert.equal(membership.can_set,true,'unexpected member can assume checker role');
   await db.query('REVOKE growth_starter_session_checker FROM gs315s_untrusted');

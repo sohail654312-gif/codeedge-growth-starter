@@ -1,7 +1,7 @@
 name: Growth Starter core safety checks
 on:
   push:
-    branches: [main, engineering/phase2-core-security, release/growth-starter-candidate-20261030]
+    branches: [main, engineering/phase2-core-security, release/growth-starter-candidate-20261030, review/growth-starter-session-bridge-policy-20261030]
   pull_request:
     branches: [main]
 permissions:

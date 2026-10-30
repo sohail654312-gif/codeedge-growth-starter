@@ -90,6 +90,12 @@ WITH bridge AS (
         AND p.oid IS DISTINCT FROM
             to_regprocedure('growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid)'))
       AS schema_only_expected_routine,
+  -- A definer-owned view can read Auth as its owner, then expose rows to
+  -- the checker through a direct SELECT grant. No relation belongs here.
+  NOT EXISTS(SELECT 1 FROM pg_class rel
+      JOIN pg_namespace n ON n.oid=rel.relnamespace
+      WHERE n.nspname='growth_starter_auth_bridge')
+      AS schema_no_unreviewed_relations,
   NOT EXISTS(SELECT 1 FROM bridge b CROSS JOIN checker c
       CROSS JOIN LATERAL aclexplode(COALESCE(b.proacl,acldefault('f',b.proowner))) acl
       WHERE acl.privilege_type='EXECUTE'
@@ -130,6 +136,7 @@ WITH bridge AS (
   ('schema_acl_restricted',f.schema_acl_restricted),
   ('schema_no_external_create',f.schema_no_external_create),
   ('schema_only_expected_routine',f.schema_only_expected_routine),
+  ('schema_no_unreviewed_relations',f.schema_no_unreviewed_relations),
   ('function_acl_restricted',f.function_acl_restricted),
   ('checker_no_grant_option',f.checker_no_grant_option),
   ('public_no_schema_usage',f.public_no_schema_usage),

@@ -60,6 +60,31 @@ WITH bridge AS (
             AND col.attnum>0 AND NOT col.attisdropped
             AND has_column_privilege(c.oid,col.attrelid,col.attnum,'SELECT'))
       FROM checker c CROSS JOIN auth_objs a),false) AS checker_no_raw_auth,
+  -- NOLOGIN/NOINHERIT and denial of SELECT do not prohibit direct Auth writes.
+  -- Fail closed on Auth namespace CREATE, relation DML/DDL privileges, and
+  -- column-level INSERT/UPDATE/REFERENCES (which table checks can miss).
+  (NOT EXISTS(SELECT 1 FROM checker c CROSS JOIN auth_objs a
+      WHERE has_schema_privilege(c.oid,a.schema_oid,'CREATE'))
+   AND NOT EXISTS(SELECT 1 FROM checker c
+      JOIN pg_namespace n ON n.nspname='auth'
+      JOIN pg_class rel ON rel.relnamespace=n.oid
+      WHERE rel.relkind IN ('r','p','v','f','m')
+        AND (has_table_privilege(c.oid,rel.oid,'INSERT')
+          OR has_table_privilege(c.oid,rel.oid,'UPDATE')
+          OR has_table_privilege(c.oid,rel.oid,'DELETE')
+          OR has_table_privilege(c.oid,rel.oid,'TRUNCATE')
+          OR has_table_privilege(c.oid,rel.oid,'REFERENCES')
+          OR has_table_privilege(c.oid,rel.oid,'TRIGGER')))
+   AND NOT EXISTS(SELECT 1 FROM checker c
+      JOIN pg_namespace n ON n.nspname='auth'
+      JOIN pg_class rel ON rel.relnamespace=n.oid
+      JOIN pg_attribute col ON col.attrelid=rel.oid
+      WHERE rel.relkind IN ('r','p','v','f','m')
+        AND col.attnum>0 AND NOT col.attisdropped
+        AND (has_column_privilege(c.oid,rel.oid,col.attnum,'INSERT')
+          OR has_column_privilege(c.oid,rel.oid,col.attnum,'UPDATE')
+          OR has_column_privilege(c.oid,rel.oid,col.attnum,'REFERENCES'))))
+      AS checker_no_auth_write,
   NOT EXISTS(SELECT 1 FROM api a CROSS JOIN checker c
       WHERE pg_has_role(a.oid,c.oid,'USAGE') OR pg_has_role(a.oid,c.oid,'SET'))
       AS checker_not_api_reachable,
@@ -135,6 +160,7 @@ WITH bridge AS (
   ('schema_owner_matches_function_owner',f.schema_owner_matches_function_owner),
   ('checker_has_narrow_access',f.checker_has_narrow_access),
   ('checker_no_raw_auth',f.checker_no_raw_auth),
+  ('checker_no_auth_write',f.checker_no_auth_write),
   ('checker_not_api_reachable',f.checker_not_api_reachable),
   ('checker_has_no_members',f.checker_has_no_members),
   ('checker_has_no_parent_roles',f.checker_has_no_parent_roles),

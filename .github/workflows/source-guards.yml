@@ -1,7 +1,7 @@
 name: Growth Starter core safety checks
 on:
   push:
-    branches: [main, engineering/phase2-core-security]
+    branches: [main, engineering/phase2-core-security, release/growth-starter-candidate-20261030]
   pull_request:
     branches: [main]
 permissions:
@@ -22,7 +22,7 @@ jobs:
           node --check backend/transactional.mjs
       - name: Independent domain, route, and regression tests (stubbed SDK)
         run: node --test tests/*.test.mjs backend/pg-session-authority.test.mjs
-      - name: Check for conflict markers and accidental secret examples
+      - name: Check for unresolved conflict markers
         shell: bash
         run: |
           if grep -R -n -E '^(<<<<<<< |=======|>>>>>>> )' backend src tests; then exit 1; fi

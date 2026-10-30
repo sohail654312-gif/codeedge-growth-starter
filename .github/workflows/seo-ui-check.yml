@@ -1,62 +1,9 @@
 name: Growth Starter offline SEO UI typecheck
 on:
   push:
-    branches: [engineering/phase2-core-security]
-    # All four acceptance workflows must run on every engineering revision.
-    # Avoid a green backend SHA whose offline UI check was silently skipped.
-    paths:
-      - '**'
-      - 'src/SeoGrowthManager.tsx'
-      - 'src/PremiumContentPanel.tsx'
-      - 'src/WebsiteProposalDesk.tsx'
-      - 'src/website-proposals.css'
-      - 'backend/website-proposals.*'
-      - 'backend/pilot-review-*.mjs'
-      - 'backend/pilot-review-*.d.mts'
-      - 'tests/pilot-review-pack.test.mjs'
-      - 'tests/website-proposals.test.mjs tests/pilot-review-pack.test.mjs'
-      - 'src/premium-content.css'
-      - 'backend/premium-content-intelligence.*'
-      - 'backend/premium-content-demo.mjs'
-      - 'tests/premium-content-intelligence.test.mjs'
-      - 'src/SearchPerformancePanel.tsx'
-      - 'src/seo-search-data.css'
-      - 'backend/search-*.mjs'
-      - 'backend/search-*.d.mts'
-      - 'backend/seo-search-data.*'
-      - 'tests/seo-search-data.test.mjs'
-      - 'src/seo-growth.css'
-      - 'backend/seo-*.mjs'
-      - 'backend/seo-*.d.mts'
-      - 'tsconfig.seo.json'
-      - '.github/workflows/seo-ui-check.yml'
+    branches: [engineering/phase2-core-security, release/growth-starter-candidate-20261030]
   pull_request:
     branches: [main]
-    paths:
-      - 'src/SeoGrowthManager.tsx'
-      - 'src/PremiumContentPanel.tsx'
-      - 'src/WebsiteProposalDesk.tsx'
-      - 'src/website-proposals.css'
-      - 'backend/website-proposals.*'
-      - 'backend/pilot-review-*.mjs'
-      - 'backend/pilot-review-*.d.mts'
-      - 'tests/pilot-review-pack.test.mjs'
-      - 'tests/website-proposals.test.mjs'
-      - 'src/premium-content.css'
-      - 'backend/premium-content-intelligence.*'
-      - 'backend/premium-content-demo.mjs'
-      - 'tests/premium-content-intelligence.test.mjs'
-      - 'src/SearchPerformancePanel.tsx'
-      - 'src/seo-search-data.css'
-      - 'backend/search-*.mjs'
-      - 'backend/search-*.d.mts'
-      - 'backend/seo-search-data.*'
-      - 'tests/seo-search-data.test.mjs'
-      - 'src/seo-growth.css'
-      - 'backend/seo-*.mjs'
-      - 'backend/seo-*.d.mts'
-      - 'tsconfig.seo.json'
-      - '.github/workflows/seo-ui-check.yml'
 permissions:
   contents: read
 jobs:
@@ -106,7 +53,7 @@ jobs:
       - name: Install and audit pinned isolated browser QA dependencies
         run: |
           npm ci --prefix tests/ui --ignore-scripts --no-fund
-          npm audit --prefix tests/ui --audit-level=high
+          npm audit --prefix tests/ui --audit-level=moderate
       - name: Install disposable Chromium browser
         working-directory: tests/ui
         run: npx playwright install --with-deps chromium

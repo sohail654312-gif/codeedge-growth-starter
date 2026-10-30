@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "stage": "SOURCE_CANDIDATE",
+  "branch": "release/growth-starter-candidate-20261030",
+  "assembledOn": "2026-10-30",
+  "timezone": "Asia/Karachi",
+  "base": {
+    "pullRequest": 30,
+    "sha": "6d7aecec51f3ee566de1b818872d4b71d0965f0d",
+    "engineeringSha": "9bddbbf029b7754566126be8a2225c776457326e"
+  },
+  "includedFixes": [
+    {
+      "pullRequest": 3,
+      "sha": "74596020629be0f5b6febbdb004434a9d752e7e2",
+      "scope": "Whitespace-aware keyword CSV escaping and three existing regression tests"
+    },
+    {
+      "pullRequests": "7–30",
+      "scope": "Security/cancellation/pooled-connection hardening and latest Auth bridge catalog carried by PR #30 ancestry; no hosted activation"
+    },
+    {
+      "scope": "Vite pinned to 6.4.5; package metadata resolved on a GitHub-hosted runner; unrelated optional-platform lock metadata preserved"
+    }
+  ],
+  "historicalReviews": [
+    {
+      "pullRequest": 4,
+      "disposition": "Historical tenant catalog assessment; findings retained as hosted acceptance gates, not replayed as current hosted facts"
+    },
+    {
+      "pullRequest": 5,
+      "disposition": "Historical Edge feasibility assessment, not a runtime fix; old signature-matching tests are stale after pooled-transaction hardening"
+    },
+    {
+      "pullRequest": 6,
+      "disposition": "Historical recovery decision note; does not replace the later mandatory exact-session authority"
+    }
+  ],
+  "sourceGates": [
+    "source-guards.yml",
+    "postgres-security.yml",
+    "seo-ui-check.yml",
+    "staging-supply-chain.yml"
+  ],
+  "currentEvidence": ".github/workflows/candidate-evidence.yml",
+  "historicalEvidence": [
+    "artifacts/release-readiness.json",
+    "artifacts/final-implementation-verification.json"
+  ],
+  "hostedStaging": "BLOCKED_PENDING_INDEPENDENT_ACCEPTANCE",
+  "production": "BLOCKED",
+  "deploymentPerformed": false,
+  "hostedDatabaseChanges": false,
+  "localComputerUsedForRepositoryOrBuilds": false
+}

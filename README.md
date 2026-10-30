@@ -1,55 +1,39 @@
 # Codeedge Growth Starter
 
-Standalone, mobile-first Codeedge growth portal for clinics and small local businesses.
+Mobile-first growth portal for Codeedge agencies, clinics and local businesses.
 
-**Current status:** Phase 1 preview deployed; not production accepted.
+## Current source candidate
 
-**Live app:** https://codeedge-growth-starter-5jhvfk.v2.appdeploy.ai/
+The consolidated candidate is `release/growth-starter-candidate-20261030`, based on security review PR #30 (`6d7aecec51f3ee566de1b818872d4b71d0965f0d`). It carries the newer private workspace, pooled-connection privilege checks and narrow Auth bridge review, plus PR #3's keyword CSV fix and patched Vite 6.4.5.
 
-## Phase 2 engineering update (draft PR only)
+**Source validation and hosted acceptance are separate.** Read [the candidate manifest](release/candidate-manifest.json) and [release handoff](docs/RELEASE-CANDIDATE.md). The four required GitHub Actions workflows run on every candidate push. [Candidate evidence](https://github.com/sohail654312-gif/codeedge-growth-starter/actions/workflows/candidate-evidence.yml?query=branch%3Arelease%2Fgrowth-starter-candidate-20261030) publishes an immutable JSON artifact for the exact commit after those checks finish. A source pass never enables deployment or clears hosted/production blockers.
 
-**Latest continuation:** [Security and staging evidence](docs/PHASE2-CONTINUATION-EVIDENCE.md). The branch now includes fail-closed invitation/approval gates, a transaction-backed provider contract, simple client work progress UI, and secure media placeholders; none of this has been merged into production.
+## Preview versus newer application
 
-An isolated, review-only core has been added on the Phase 2 engineering branch:
-- AppDeploy route adapter delegates to dependency-injected domain handlers; all private routes use SDK `requireAuth()`.
-- Owner workspace ID is derived from authenticated server user ID; existing owner-keyed tables are preserved for legacy records.
-- Role matrix covers owner, agency admin, staff and client; unknown/fabricated workspace selections fail closed.
-- Server-side validation, paginated enquiry/request reads, MIME plus first-byte media signature checks.
-- Bounded media quota, owner/admin media deletion and request review/client decision transition rules.
-- 19 CI checks passed against *mocked* SDK adapters at the implementation SHA (not hosted runtime acceptance).
+The existing [AppDeploy preview](https://codeedge-growth-starter-5jhvfk.v2.appdeploy.ai/) is the early owner-scoped implementation. The latest stored preview backend inspected on 30 October 2026 matched `main` at `dd0ee8a9b5c4a770443a7a2eff2732858c01300e`. GitHub pushes do not automatically redeploy it.
 
-**Blocked:** No client invites or membership creation, verified email binding, real agency UI, true DB transactions, production file scanning, video upload, privacy approval, fully reproducible AppDeploy build, or independently verified cross-tenant hosted behavior. Do not enable real-client use from these source tests.
+| Capability | Consolidated source | Hosted acceptance |
+| --- | --- | --- |
+| Private HTTPS login and short-lived server sessions | Implemented with mandatory injected exact-session authority | Unverified; authority module and provider lifecycle acceptance required |
+| Current workspace/role checks, profile and work requests | Restricted PostgreSQL operations with transactions, version checks and audit receipts | Real signed tenant and direct API denial checks required |
+| Client review, corrections, assignment, history and loaded-page reports | Private workspace UI and synthetic HTTPS/database journeys | Real agency/client pilot unaccepted |
+| Media | Consent/read/delete-queue contracts and isolated tests | Live upload, scanner, private serving and deletion acceptance incomplete |
+| SEO, AEO and content planning | Offline supplied HTML and unverified imported Search Console extracts | No live Google, AI-search, publishing or ranking claims |
+| Invitations, CRM/enquiry parity, payments and automation | Partial contracts or separate preview capabilities | No complete connected commercial journey |
 
-## Implemented in Phase 1
-- Read-only sample clinic workspace with clearly illustrative data
-- AppDeploy sign-in, owner-scoped business profile, enquiries and status
-- Content requests, private image uploads and signed image URLs
-- Website / local SEO / AEO roadmap without fabricated live metrics
-- Mobile-friendly Codeedge dashboard
+The private application is built separately with `npm run typecheck:private` and `npm run build:private`. The older `App.tsx` entrypoint depends on runtime-provided AppDeploy SDK imports; its standard build is not the portable private runtime.
 
-## Not yet included
-Team and agency roles, production Business OS/CIGO integration, real Google metrics, AI publishing, direct WhatsApp workflows, video storage, payments, patient records, and production audit/acceptance.
+## GitHub validation
 
-## Development
-React + TypeScript + Vite frontend, with AppDeploy SDK routes, database and storage.
-This repository mirrors the currently deployed AppDeploy source snapshot. GitHub pushes do not automatically redeploy AppDeploy. The `@appdeploy/client` and `@appdeploy/sdk` imports are runtime-provided; the standard local Vite build is not yet portable without equivalent SDK support.
+- `source-guards.yml`: source regressions, release evidence rejection cases and CSV safety.
+- `postgres-security.yml`: focused synthetic Auth bridge, then the remaining PostgreSQL 17 migrations, authorization and rollback tests.
+- `seo-ui-check.yml`: typechecks, private build, offline SEO, mobile/desktop accessibility and composed synthetic HTTPS/database browser journeys.
+- `staging-supply-chain.yml`: locked dependency audits at moderate severity, portable container build and refusal of unapproved startup.
 
-Run `node --test tests/source-contract.test.mjs` for **static source-guard tests only**. This does not replace backend, tenant-isolation or live end-to-end testing.
+The historical committed readiness JSON files and dated handoffs are snapshots, not current launch certificates. Current candidate evidence is generated by Actions, tied to its commit, and uploaded without committing test results back into the source branch.
 
-See [implementation gates](docs/IMPLEMENTATION.md) and [security boundaries](docs/SECURITY.md).
+## Remaining release gates
 
-Other Codeedge repositories are read-only reference; changes here must not modify Business OS, CIGO or MVP.
+Exact provider-session/account policy, current hosted privilege/API inventory, restricted credentials, reviewed migration baseline and legacy cutover, approved HTTPS host, real fictional-account tenant tests, media/invitation providers, restore/monitoring and independent acceptance remain outstanding. [Security boundaries](docs/SECURITY.md) and [the candidate handoff](docs/RELEASE-CANDIDATE.md) explain the limits.
 
-Do not commit API credentials, real clinic/patient content, production datasets or uploaded photos. Consider changing this repository from public to private in GitHub Settings.
-
-## Phase 2.1 implementation (PR #2, draft)
-[Reviewable transactional/UX evidence](docs/PHASE2-1-REVIEW-HANDOFF.md): disposable PostgreSQL 16 tests, synthetic signed-session HTTP isolation, Website and guarded Agency desk pages, image decoding and deletion outbox. No live cross-workspace invitations or production provider binding.
-
-## Phase 2.7 — offline Search Console analytics
-The `Google & SEO` view now supports local-only Search Console CSV/normalized JSON import and verified arithmetic on supplied rows. See [operator guide](docs/PHASE2-7-SEARCH-ANALYTICS.md) and [Phase 2.7 handoff](docs/PHASE2-7-HANDOFF.md). Live Google OAuth, external crawling, website edits and client database writes remain disabled.
-
-## Phase 2.9 — Premium offline content intelligence
-Growth Starter now offers evidence-scoped SEO, GEO-readiness, AEO answer drafts, SCO, local visibility suggestions and social content concepts in its existing navy/white offline review interface. It accepts only supplied-page and clearly labelled unverified Search Console evidence, with no real AI-search citation or Google provider claim. See [Phase 2.9 guide](docs/PHASE2-9-CONTENT-INTELLIGENCE.md) and [handoff](docs/PHASE2-9-HANDOFF.md). Publication, report persistence, agency writes, live Auth and crawling remain disabled.
-
-## Phase 3.0 — review-only content changes and security cutover preparation
-The premium SEO desk now provides browser-local before/after website proposals and correction-note download with no editing/publishing capability. A review-only SQL draft and disposable test prepare retirement of the vulnerable actor-supplied SECURITY DEFINER reader functions; hosted security still BLOCKED. See [Phase 3.0 handoff](docs/PHASE3-0-HANDOFF.md).
+Keep synthetic/demo data clearly labeled. Do not commit credentials, real patient/customer datasets or uploaded media. Business OS, CIGO, MVP and external publishing/payment systems are outside this candidate. No hosted migration, deployment or production activation is performed by these workflows.

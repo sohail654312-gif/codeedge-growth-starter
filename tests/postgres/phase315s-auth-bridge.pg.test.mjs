@@ -75,6 +75,20 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   await expectCatalogFailure('checker_no_auth_write');
   await db.query('REVOKE UPDATE (id) ON auth.users FROM growth_starter_session_checker');
   assert.equal((await inspectCatalog()).checksPassed,true,'Auth write grants must be fully revoked');
+  // Auth sequences have their own ACLs: table/column DML checks miss these.
+  // All changes below are confined to the synthetic disposable Auth schema.
+  await db.query('CREATE SEQUENCE auth.gs315s_probe_sequence');
+  for(const privilege of ['USAGE','SELECT','UPDATE']){
+   await db.query(`GRANT ${privilege} ON SEQUENCE auth.gs315s_probe_sequence TO growth_starter_session_checker`);
+   const direct=(await db.query(
+    'SELECT has_sequence_privilege($1,$2,$3) AS allowed',
+    ['growth_starter_session_checker','auth.gs315s_probe_sequence',privilege])).rows[0];
+   assert.equal(direct.allowed,true,`${privilege} synthetic sequence grant must exist`);
+   await expectCatalogFailure('checker_no_auth_sequence_access');
+   await db.query(`REVOKE ${privilege} ON SEQUENCE auth.gs315s_probe_sequence FROM growth_starter_session_checker`);
+   assert.equal((await inspectCatalog()).checksPassed,true,`${privilege} sequence grant revoked`);
+  }
+  await db.query('DROP SEQUENCE auth.gs315s_probe_sequence');
   // NOINHERIT on the checker does not prevent an unrelated member from SET ROLE.
   // Even without direct ACL grants, that member can assume the checker authority.
   await db.query('GRANT growth_starter_session_checker TO gs315s_untrusted');

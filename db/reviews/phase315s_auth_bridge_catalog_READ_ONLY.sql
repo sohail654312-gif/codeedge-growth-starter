@@ -85,6 +85,16 @@ WITH bridge AS (
           OR has_column_privilege(c.oid,rel.oid,col.attnum,'UPDATE')
           OR has_column_privilege(c.oid,rel.oid,col.attnum,'REFERENCES'))))
       AS checker_no_auth_write,
+   -- Sequence ACLs are separate from table/column grants. A direct USAGE,
+   -- SELECT or UPDATE grant on any managed Auth sequence is unexpected even
+   -- while the checker lacks auth schema USAGE; deny future privilege drift.
+   NOT EXISTS(SELECT 1 FROM checker c
+       JOIN pg_namespace n ON n.nspname='auth'
+       JOIN pg_class seq ON seq.relnamespace=n.oid AND seq.relkind='S'
+       WHERE has_sequence_privilege(c.oid,seq.oid,'USAGE')
+          OR has_sequence_privilege(c.oid,seq.oid,'SELECT')
+          OR has_sequence_privilege(c.oid,seq.oid,'UPDATE'))
+       AS checker_no_auth_sequence_access,
   NOT EXISTS(SELECT 1 FROM api a CROSS JOIN checker c
       WHERE pg_has_role(a.oid,c.oid,'USAGE') OR pg_has_role(a.oid,c.oid,'SET'))
       AS checker_not_api_reachable,
@@ -161,6 +171,7 @@ WITH bridge AS (
   ('checker_has_narrow_access',f.checker_has_narrow_access),
   ('checker_no_raw_auth',f.checker_no_raw_auth),
   ('checker_no_auth_write',f.checker_no_auth_write),
+  ('checker_no_auth_sequence_access',f.checker_no_auth_sequence_access),
   ('checker_not_api_reachable',f.checker_not_api_reachable),
   ('checker_has_no_members',f.checker_has_no_members),
   ('checker_has_no_parent_roles',f.checker_has_no_parent_roles),

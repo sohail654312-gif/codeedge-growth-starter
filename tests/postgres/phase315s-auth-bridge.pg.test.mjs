@@ -106,6 +106,17 @@ test('Phase 3.15S restricted exact-pair function grants no raw Auth access',asyn
   }finally{await db.query('RESET ROLE');}
   await expectCatalogFailure('schema_only_expected_routine');
   await db.query('DROP FUNCTION growth_starter_auth_bridge.unreviewed_probe()');
+  // A view owned by the Auth-reading definer can leak Auth rows when the
+  // checker is granted SELECT, even though no extra function was installed.
+  await db.query('CREATE VIEW growth_starter_auth_bridge.unreviewed_users AS SELECT id FROM auth.users');
+  await db.query('GRANT SELECT ON growth_starter_auth_bridge.unreviewed_users TO growth_starter_session_checker');
+  await db.query('SET ROLE growth_starter_session_checker');
+  try{
+   const leaked=(await db.query('SELECT count(*)::integer AS total FROM growth_starter_auth_bridge.unreviewed_users')).rows[0];
+   assert.equal(leaked.total,2,'definer-owned view exposes synthetic Auth rows');
+  }finally{await db.query('RESET ROLE');}
+  await expectCatalogFailure('schema_no_unreviewed_relations');
+  await db.query('DROP VIEW growth_starter_auth_bridge.unreviewed_users');
   await db.query('GRANT EXECUTE ON FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) TO gs315s_untrusted');
   await expectCatalogFailure('function_acl_restricted');
   await db.query('REVOKE EXECUTE ON FUNCTION growth_starter_auth_bridge.exact_pair_snapshot(uuid,uuid) FROM gs315s_untrusted');
